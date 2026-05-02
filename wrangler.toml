@@ -1,0 +1,21 @@
+name = "dex-swap-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+
+# Route: deployed at https://dex-swap-gateway.dev.zerowallet.io/
+# routes = [
+#   { pattern = "dex-swap-gateway.dev.zerowallet.io/api/v1/*", zone_id = "<zone-id>" }
+# ]
+
+# Environment variables (set via wrangler secret or dashboard)
+[vars]
+# OKX DEX API endpoint
+OKX_BASE_URL = "https://www.okx.com"
+# Cache TTL in seconds for token list responses
+TOKEN_CACHE_TTL = 60
+
+# Secrets (set via `npx wrangler secret put` — not stored in this file):
+#   OKX_API_KEY
+#   OKX_SECRET_KEY
+#   OKX_API_PASSPHRASE
+#   OKX_PROJECT_ID
