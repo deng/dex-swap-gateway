@@ -694,7 +694,7 @@ const openapiSpec = () => {
             msg: { type: 'string', example: '' },
             data: {
               type: 'array',
-              items: { type: 'object' },
+              items: { type: 'object', additionalProperties: true },
             },
           },
         },
