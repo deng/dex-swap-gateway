@@ -11,6 +11,8 @@ export interface Env {
   OKX_PROJECT_ID: string;
   OKX_BASE_URL: string;
   TOKEN_CACHE_TTL: string; // seconds, e.g. "60"
+  JUPITER_BASE_URL: string;
+  JUPITER_API_KEY: string;
 }
 
 type ChainMap = Record<string, string>;
@@ -155,6 +157,43 @@ async function getTokens(env: Env, chain: string): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
+// Jupiter API proxy helpers
+// ---------------------------------------------------------------------------
+async function proxyJupiter(env: Env, req: OkxRequest): Promise<Response> {
+  const url = `${env.JUPITER_BASE_URL}${req.path}${req.query ? '?' + req.query : ''}`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-api-key': env.JUPITER_API_KEY,
+  };
+
+  const fetchInit: RequestInit = {
+    method: req.method,
+    headers,
+  };
+  if (req.body) {
+    fetchInit.body = req.body;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(url, fetchInit);
+  } catch (err) {
+    return new Response(JSON.stringify({ error: `Jupiter API request failed: ${(err as Error).message}` }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const respHeaders = new Headers(response.headers);
+  respHeaders.set('Cache-Control', 'public, max-age=2');
+
+  return new Response(response.body, {
+    status: response.status,
+    headers: respHeaders,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Hono app
 // ---------------------------------------------------------------------------
 const app = new Hono<{ Bindings: Env }>();
@@ -258,6 +297,64 @@ app.post('/api/v1/dex-swap/build-approve', async (c) => {
     method: 'GET',
     path: '/api/v6/dex/aggregator/approve-transaction',
     query: queryParams.toString(),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Jupiter Swap API v2 routes (Solana)
+// ---------------------------------------------------------------------------
+
+// Jupiter: Get quote + unsigned transaction
+app.get('/api/v1/jupiter/order', async (c) => {
+  const inputMint = c.req.query('inputMint');
+  const outputMint = c.req.query('outputMint');
+  const amount = c.req.query('amount');
+  const taker = c.req.query('taker');
+
+  if (!inputMint || !outputMint || !amount || !taker) {
+    return c.json({ error: 'Missing required parameters: inputMint, outputMint, amount, taker' }, 400);
+  }
+
+  const queryParams = new URLSearchParams({
+    inputMint,
+    outputMint,
+    amount,
+    taker,
+  });
+
+  const slippageBps = c.req.query('slippageBps');
+  if (slippageBps) {
+    queryParams.set('slippageBps', slippageBps);
+  }
+
+  const swapMode = c.req.query('swapMode');
+  if (swapMode) {
+    queryParams.set('swapMode', swapMode);
+  }
+
+  const dynamicSlippage = c.req.query('dynamicSlippage');
+  if (dynamicSlippage) {
+    queryParams.set('dynamicSlippage', dynamicSlippage);
+  }
+
+  return proxyJupiter(c.env, {
+    method: 'GET',
+    path: '/order',
+    query: queryParams.toString(),
+  });
+});
+
+// Jupiter: Execute signed transaction
+app.post('/api/v1/jupiter/execute', async (c) => {
+  const body = await c.req.json();
+  if (!body.signedTransaction || !body.requestId) {
+    return c.json({ error: 'Missing required fields: signedTransaction, requestId' }, 400);
+  }
+
+  return proxyJupiter(c.env, {
+    method: 'POST',
+    path: '/execute',
+    body: JSON.stringify(body),
   });
 });
 
@@ -438,6 +535,96 @@ const openapiSpec = () => {
             },
             '400': {
               description: '不支持的链',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/GatewayErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api/v1/jupiter/order': {
+        get: {
+          summary: '获取 Jupiter 报价和交易',
+          description: '通过 Jupiter Swap API v2 获取 Solana 链上代币兑换的报价和未签名交易。',
+          tags: ['Jupiter'],
+          parameters: [
+            {
+              name: 'inputMint', in: 'query', required: true,
+              schema: { type: 'string' },
+              description: '输入代币的 Mint 地址', example: 'So11111111111111111111111111111111111111112',
+            },
+            {
+              name: 'outputMint', in: 'query', required: true,
+              schema: { type: 'string' },
+              description: '输出代币的 Mint 地址', example: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+            },
+            {
+              name: 'amount', in: 'query', required: true,
+              schema: { type: 'string' },
+              description: '输入数量（最小单位）', example: '100000000',
+            },
+            {
+              name: 'taker', in: 'query', required: true,
+              schema: { type: 'string' },
+              description: '用户钱包公钥', example: 'Gg7YdKqP7P8KqV3Q5ZxJ9X8L7s5T2p1Bv3c4D5e6F7g8h9j0k1l2m3n4o5p6',
+            },
+            {
+              name: 'slippageBps', in: 'query', required: false,
+              schema: { type: 'string' },
+              description: '滑点（基点，如 50 = 0.5%）', example: '50',
+            },
+            {
+              name: 'swapMode', in: 'query', required: false,
+              schema: { type: 'string', enum: ['ExactIn', 'ExactOut'], default: 'ExactIn' },
+              description: '交易模式', example: 'ExactIn',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Jupiter 订单数据（含报价和未签名交易）',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/JupiterOrderResponse' },
+                },
+              },
+            },
+            '400': {
+              description: '参数校验失败',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/GatewayErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api/v1/jupiter/execute': {
+        post: {
+          summary: '执行 Jupiter Swap 交易',
+          description: '提交已签名的 Solana 交易到 Jupiter 执行。',
+          tags: ['Jupiter'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/JupiterExecuteRequest' },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: '执行结果',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/JupiterExecuteResponse' },
+                },
+              },
+            },
+            '400': {
+              description: '参数校验失败',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/GatewayErrorResponse' },
@@ -656,6 +843,68 @@ const openapiSpec = () => {
             data: { type: 'string', example: '0x095ea7b3000000000000000000000000...' },
             gasLimit: { type: 'string', example: '50000' },
             gasPrice: { type: 'string', example: '110000000' },
+          },
+        },
+        // ---- Jupiter ----
+        JupiterOrderResponse: {
+          type: 'object',
+          properties: {
+            inputMint: { type: 'string', example: 'So11111111111111111111111111111111111111112' },
+            inAmount: { type: 'string', example: '100000000' },
+            outputMint: { type: 'string', example: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
+            outAmount: { type: 'string', example: '249850' },
+            otherAmountThreshold: { type: 'string', example: '249725' },
+            priceImpactPct: { type: 'string', example: '0.060000000000000000' },
+            slippageBps: { type: 'integer', example: 50 },
+            routePlan: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  swapInfo: { $ref: '#/components/schemas/JupiterSwapInfo' },
+                  percent: { type: 'integer', example: 100 },
+                },
+              },
+            },
+            requestId: { type: 'string', example: 'uuid-string' },
+            transaction: { type: 'string', description: 'Base64 编码的未签名 Solana 交易', example: 'base64...' },
+          },
+        },
+        JupiterSwapInfo: {
+          type: 'object',
+          properties: {
+            ammKey: { type: 'string', example: '...' },
+            label: { type: 'string', example: 'Raydium' },
+            inputMint: { type: 'string' },
+            outputMint: { type: 'string' },
+            inAmount: { type: 'string' },
+            outAmount: { type: 'string' },
+            feeAmount: { type: 'string' },
+            feeMint: { type: 'string' },
+          },
+        },
+        JupiterExecuteRequest: {
+          type: 'object',
+          required: ['signedTransaction', 'requestId'],
+          properties: {
+            signedTransaction: {
+              type: 'string',
+              description: '客户端签名后的 Base64 编码 Solana 交易',
+              example: 'AQAAAAAAAAAAAAAAAAAAAA...',
+            },
+            requestId: {
+              type: 'string',
+              description: '从 /jupiter/order 返回的 requestId',
+              example: 'uuid-string',
+            },
+          },
+        },
+        JupiterExecuteResponse: {
+          type: 'object',
+          properties: {
+            signature: { type: 'string', description: '链上交易签名', example: '5KtPn3...' },
+            status: { type: 'string', enum: ['Success', 'Failed'], example: 'Success' },
+            error: { type: 'string', nullable: true, example: null },
           },
         },
       },

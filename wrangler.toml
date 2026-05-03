@@ -13,9 +13,12 @@ compatibility_date = "2025-07-18"
 OKX_BASE_URL = "https://www.okx.com"
 # Cache TTL in seconds for token list responses
 TOKEN_CACHE_TTL = 60
+# Jupiter Swap API v2 (Solana DEX aggregation)
+JUPITER_BASE_URL = "https://api.jup.ag/swap/v2"
 
 # Secrets (set via `npx wrangler secret put` — not stored in this file):
 #   OKX_API_KEY
 #   OKX_SECRET_KEY
 #   OKX_API_PASSPHRASE
 #   OKX_PROJECT_ID
+#   JUPITER_API_KEY
