@@ -192,6 +192,8 @@ describe('GET /api/v1/dex-swap/quote', () => {
       mockEnv,
     );
     expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('Missing chain');
   });
 
   it('should proxy request to OKX with default slippage when not provided', async () => {
