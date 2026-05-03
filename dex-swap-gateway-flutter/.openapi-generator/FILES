@@ -12,6 +12,12 @@ doc/DexProtocol.md
 doc/DexRouter.md
 doc/GatewayErrorResponse.md
 doc/HealthResponse.md
+doc/JupiterApi.md
+doc/JupiterExecuteRequest.md
+doc/JupiterExecuteResponse.md
+doc/JupiterOrderResponse.md
+doc/JupiterOrderResponseRoutePlanInner.md
+doc/JupiterSwapInfo.md
 doc/OkxResponse.md
 doc/QuoteData.md
 doc/QuoteResponse.md
@@ -26,6 +32,7 @@ doc/TransactionData.md
 git_push.sh
 lib/api.dart
 lib/api/dex_swap_api.dart
+lib/api/jupiter_api.dart
 lib/api/system_api.dart
 lib/api_client.dart
 lib/api_exception.dart
@@ -43,6 +50,11 @@ lib/model/dex_protocol.dart
 lib/model/dex_router.dart
 lib/model/gateway_error_response.dart
 lib/model/health_response.dart
+lib/model/jupiter_execute_request.dart
+lib/model/jupiter_execute_response.dart
+lib/model/jupiter_order_response.dart
+lib/model/jupiter_order_response_route_plan_inner.dart
+lib/model/jupiter_swap_info.dart
 lib/model/okx_response.dart
 lib/model/quote_data.dart
 lib/model/quote_response.dart
@@ -63,6 +75,12 @@ test/dex_router_test.dart
 test/dex_swap_api_test.dart
 test/gateway_error_response_test.dart
 test/health_response_test.dart
+test/jupiter_api_test.dart
+test/jupiter_execute_request_test.dart
+test/jupiter_execute_response_test.dart
+test/jupiter_order_response_route_plan_inner_test.dart
+test/jupiter_order_response_test.dart
+test/jupiter_swap_info_test.dart
 test/okx_response_test.dart
 test/quote_data_test.dart
 test/quote_response_test.dart

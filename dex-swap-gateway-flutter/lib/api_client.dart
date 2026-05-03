@@ -198,6 +198,16 @@ class ApiClient {
           return GatewayErrorResponse.fromJson(value);
         case 'HealthResponse':
           return HealthResponse.fromJson(value);
+        case 'JupiterExecuteRequest':
+          return JupiterExecuteRequest.fromJson(value);
+        case 'JupiterExecuteResponse':
+          return JupiterExecuteResponse.fromJson(value);
+        case 'JupiterOrderResponse':
+          return JupiterOrderResponse.fromJson(value);
+        case 'JupiterOrderResponseRoutePlanInner':
+          return JupiterOrderResponseRoutePlanInner.fromJson(value);
+        case 'JupiterSwapInfo':
+          return JupiterSwapInfo.fromJson(value);
         case 'OkxResponse':
           return OkxResponse.fromJson(value);
         case 'QuoteData':
