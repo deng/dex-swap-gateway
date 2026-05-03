@@ -17,7 +17,7 @@ class TransactionData {
     this.from,
     this.to,
     this.value,
-    this.gas,
+    this.gasLimit,
     this.gasPrice,
     this.maxPriorityFeePerGas,
     this.maxSpendAmount,
@@ -64,7 +64,7 @@ class TransactionData {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? gas;
+  String? gasLimit;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -114,7 +114,7 @@ class TransactionData {
     other.from == from &&
     other.to == to &&
     other.value == value &&
-    other.gas == gas &&
+    other.gasLimit == gasLimit &&
     other.gasPrice == gasPrice &&
     other.maxPriorityFeePerGas == maxPriorityFeePerGas &&
     other.maxSpendAmount == maxSpendAmount &&
@@ -129,7 +129,7 @@ class TransactionData {
     (from == null ? 0 : from!.hashCode) +
     (to == null ? 0 : to!.hashCode) +
     (value == null ? 0 : value!.hashCode) +
-    (gas == null ? 0 : gas!.hashCode) +
+    (gasLimit == null ? 0 : gasLimit!.hashCode) +
     (gasPrice == null ? 0 : gasPrice!.hashCode) +
     (maxPriorityFeePerGas == null ? 0 : maxPriorityFeePerGas!.hashCode) +
     (maxSpendAmount == null ? 0 : maxSpendAmount!.hashCode) +
@@ -138,7 +138,7 @@ class TransactionData {
     (signatureData.hashCode);
 
   @override
-  String toString() => 'TransactionData[data=$data, from=$from, to=$to, value=$value, gas=$gas, gasPrice=$gasPrice, maxPriorityFeePerGas=$maxPriorityFeePerGas, maxSpendAmount=$maxSpendAmount, minReceiveAmount=$minReceiveAmount, slippagePercent=$slippagePercent, signatureData=$signatureData]';
+  String toString() => 'TransactionData[data=$data, from=$from, to=$to, value=$value, gasLimit=$gasLimit, gasPrice=$gasPrice, maxPriorityFeePerGas=$maxPriorityFeePerGas, maxSpendAmount=$maxSpendAmount, minReceiveAmount=$minReceiveAmount, slippagePercent=$slippagePercent, signatureData=$signatureData]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -162,10 +162,10 @@ class TransactionData {
     } else {
       json[r'value'] = null;
     }
-    if (this.gas != null) {
-      json[r'gas'] = this.gas;
+    if (this.gasLimit != null) {
+      json[r'gasLimit'] = this.gasLimit;
     } else {
-      json[r'gas'] = null;
+      json[r'gasLimit'] = null;
     }
     if (this.gasPrice != null) {
       json[r'gasPrice'] = this.gasPrice;
@@ -219,7 +219,7 @@ class TransactionData {
         from: mapValueOfType<String>(json, r'from'),
         to: mapValueOfType<String>(json, r'to'),
         value: mapValueOfType<String>(json, r'value'),
-        gas: mapValueOfType<String>(json, r'gas'),
+        gasLimit: mapValueOfType<String>(json, r'gasLimit'),
         gasPrice: mapValueOfType<String>(json, r'gasPrice'),
         maxPriorityFeePerGas: mapValueOfType<String>(json, r'maxPriorityFeePerGas'),
         maxSpendAmount: mapValueOfType<String>(json, r'maxSpendAmount'),

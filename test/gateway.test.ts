@@ -154,6 +154,64 @@ describe('GET /api/v1/dex-swap/quote', () => {
     const body = await res.json();
     expect(body.error).toContain('Missing required parameters');
   });
+
+  it('should return 400 if fromToken is missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote?chain=eth&toToken=0x&amount=1'),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('Missing required parameters');
+  });
+
+  it('should return 400 if toToken is missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote?chain=eth&fromToken=0x&amount=1'),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('Missing required parameters');
+  });
+
+  it('should return 400 if amount is missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote?chain=eth&fromToken=0x&toToken=0x'),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('Missing required parameters');
+  });
+
+  it('should return 400 for empty chain string', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote?chain=&fromToken=0x&toToken=0x&amount=1'),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('should proxy request to OKX with default slippage when not provided', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote?chain=eth&fromToken=0xA&toToken=0xB&amount=100'),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toContain('slippagePercent=0.5');
+
+    globalThis.fetch = originalFetch;
+  });
 });
 
 describe('POST /api/v1/dex-swap/build-tx', () => {
@@ -209,6 +267,38 @@ describe('POST /api/v1/dex-swap/build-tx', () => {
       mockEnv,
     );
     expect(res.status).toBe(400);
+  });
+
+  it('should return 400 if body is empty', async () => {
+    const app = await createApp();
+    const res = await app.fetch(mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-tx', {}), mockEnv);
+    expect(res.status).toBe(400);
+  });
+
+  it('should use default slippage and swapMode when not provided', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-tx', {
+        chain: 'eth',
+        fromToken: '0xA',
+        toToken: '0xB',
+        amount: '100',
+        fromAddress: '0xUser',
+      }),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toContain('slippagePercent=0.5');
+    expect(callUrl).toContain('swapMode=exactIn');
+
+    globalThis.fetch = originalFetch;
   });
 });
 
@@ -282,6 +372,39 @@ describe('POST /api/v1/dex-swap/build-approve', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it('should return 400 if chain is missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-approve', { token: '0xToken' }),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('should pass through custom approveAmount when provided', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-approve', {
+        chain: 'eth',
+        token: '0xToken',
+        amount: '1000',
+      }),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toContain('approveAmount=1000');
+    expect(callUrl).not.toContain('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+
+    globalThis.fetch = originalFetch;
+  });
 });
 
 describe('Cross-Origin Resource Sharing (CORS)', () => {
@@ -289,6 +412,25 @@ describe('Cross-Origin Resource Sharing (CORS)', () => {
     const app = await createApp();
     const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/health'), mockEnv);
     expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('should include CORS headers in error responses', async () => {
+    const app = await createApp();
+    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote'), mockEnv);
+    expect(res.status).toBe(400);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('should respond to OPTIONS preflight with CORS headers', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      new Request('http://localhost/api/v1/dex-swap/quote', { method: 'OPTIONS' }),
+      mockEnv,
+    );
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    expect(res.headers.get('access-control-allow-methods')).toContain('GET');
+    expect(res.headers.get('access-control-allow-methods')).toContain('POST');
+    expect(res.headers.get('access-control-max-age')).toBe('86400');
   });
 });
 
@@ -299,6 +441,77 @@ describe('Cache control headers', () => {
     // Health endpoint should have default/minimal caching
     const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/health'), mockEnv);
     expect(res.headers.get('Cache-Control')).toBeDefined();
+  });
+});
+
+describe('Token cache behavior', () => {
+  it('should return X-Cache: HIT on subsequent token requests', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockOkxResponse = {
+      code: '0',
+      msg: '',
+      data: [{ tokenSymbol: 'ETH', tokenName: 'Ethereum', decimals: '18', tokenContractAddress: '0x' }],
+    };
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(mockOkxResponse), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    const url = 'http://localhost/api/v1/dex-swap/tokens?chain=eth';
+
+    // First request — should miss cache and call OKX
+    const res1 = await app.fetch(mockRequest('GET', url), mockEnv);
+    expect(res1.headers.get('X-Cache')).toBe('MISS');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    // Second request — should hit cache, no OKX call
+    const res2 = await app.fetch(mockRequest('GET', url), mockEnv);
+    expect(res2.headers.get('X-Cache')).toBe('HIT');
+    expect(mockFetch).toHaveBeenCalledTimes(1); // fetch not called again
+
+    globalThis.fetch = originalFetch;
+  });
+});
+
+describe('OKX proxy error handling', () => {
+  it('should propagate OKX error status codes', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: '50001', msg: 'Rate limit exceeded' }), { status: 429 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote?chain=eth&fromToken=0xA&toToken=0xB&amount=100'),
+      mockEnv,
+    );
+
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.code).toBe('50001');
+    expect(body.msg).toContain('Rate limit');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should set Cache-Control on proxied responses', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote?chain=eth&fromToken=0xA&toToken=0xB&amount=100'),
+      mockEnv,
+    );
+
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=2');
+
+    globalThis.fetch = originalFetch;
   });
 });
 
