@@ -15,8 +15,8 @@ class ApproveTransactionData {
   ApproveTransactionData({
     this.dexContractAddress,
     this.data,
-    this.to,
     this.gasLimit,
+    this.gasPrice,
   });
 
   ///
@@ -41,7 +41,7 @@ class ApproveTransactionData {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? to;
+  String? gasLimit;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -49,25 +49,25 @@ class ApproveTransactionData {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? gasLimit;
+  String? gasPrice;
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is ApproveTransactionData &&
     other.dexContractAddress == dexContractAddress &&
     other.data == data &&
-    other.to == to &&
-    other.gasLimit == gasLimit;
+    other.gasLimit == gasLimit &&
+    other.gasPrice == gasPrice;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (dexContractAddress == null ? 0 : dexContractAddress!.hashCode) +
     (data == null ? 0 : data!.hashCode) +
-    (to == null ? 0 : to!.hashCode) +
-    (gasLimit == null ? 0 : gasLimit!.hashCode);
+    (gasLimit == null ? 0 : gasLimit!.hashCode) +
+    (gasPrice == null ? 0 : gasPrice!.hashCode);
 
   @override
-  String toString() => 'ApproveTransactionData[dexContractAddress=$dexContractAddress, data=$data, to=$to, gasLimit=$gasLimit]';
+  String toString() => 'ApproveTransactionData[dexContractAddress=$dexContractAddress, data=$data, gasLimit=$gasLimit, gasPrice=$gasPrice]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -81,15 +81,15 @@ class ApproveTransactionData {
     } else {
       json[r'data'] = null;
     }
-    if (this.to != null) {
-      json[r'to'] = this.to;
-    } else {
-      json[r'to'] = null;
-    }
     if (this.gasLimit != null) {
       json[r'gasLimit'] = this.gasLimit;
     } else {
       json[r'gasLimit'] = null;
+    }
+    if (this.gasPrice != null) {
+      json[r'gasPrice'] = this.gasPrice;
+    } else {
+      json[r'gasPrice'] = null;
     }
     return json;
   }
@@ -115,8 +115,8 @@ class ApproveTransactionData {
       return ApproveTransactionData(
         dexContractAddress: mapValueOfType<String>(json, r'dexContractAddress'),
         data: mapValueOfType<String>(json, r'data'),
-        to: mapValueOfType<String>(json, r'to'),
         gasLimit: mapValueOfType<String>(json, r'gasLimit'),
+        gasPrice: mapValueOfType<String>(json, r'gasPrice'),
       );
     }
     return null;
