@@ -26,13 +26,13 @@ void main() {
       // TODO
     });
 
-    // String to
-    test('to test the property `to`', () async {
+    // String gasLimit
+    test('to test the property `gasLimit`', () async {
       // TODO
     });
 
-    // String gasLimit
-    test('to test the property `gasLimit`', () async {
+    // String gasPrice
+    test('to test the property `gasPrice`', () async {
       // TODO
     });
 

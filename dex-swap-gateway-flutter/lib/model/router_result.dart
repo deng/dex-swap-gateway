@@ -15,12 +15,12 @@ class RouterResult {
   RouterResult({
     this.chainIndex,
     this.dexRouterList = const [],
-    this.estimatedGas,
+    this.estimateGasFee,
     this.fromToken,
     this.toToken,
     this.fromTokenAmount,
     this.toTokenAmount,
-    this.priceImpactPercentage,
+    this.priceImpactPercent,
     this.router,
     this.swapMode,
     this.tradeFee,
@@ -42,7 +42,7 @@ class RouterResult {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? estimatedGas;
+  String? estimateGasFee;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -82,7 +82,7 @@ class RouterResult {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? priceImpactPercentage;
+  String? priceImpactPercent;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -112,12 +112,12 @@ class RouterResult {
   bool operator ==(Object other) => identical(this, other) || other is RouterResult &&
     other.chainIndex == chainIndex &&
     _deepEquality.equals(other.dexRouterList, dexRouterList) &&
-    other.estimatedGas == estimatedGas &&
+    other.estimateGasFee == estimateGasFee &&
     other.fromToken == fromToken &&
     other.toToken == toToken &&
     other.fromTokenAmount == fromTokenAmount &&
     other.toTokenAmount == toTokenAmount &&
-    other.priceImpactPercentage == priceImpactPercentage &&
+    other.priceImpactPercent == priceImpactPercent &&
     other.router == router &&
     other.swapMode == swapMode &&
     other.tradeFee == tradeFee;
@@ -127,18 +127,18 @@ class RouterResult {
     // ignore: unnecessary_parenthesis
     (chainIndex == null ? 0 : chainIndex!.hashCode) +
     (dexRouterList.hashCode) +
-    (estimatedGas == null ? 0 : estimatedGas!.hashCode) +
+    (estimateGasFee == null ? 0 : estimateGasFee!.hashCode) +
     (fromToken == null ? 0 : fromToken!.hashCode) +
     (toToken == null ? 0 : toToken!.hashCode) +
     (fromTokenAmount == null ? 0 : fromTokenAmount!.hashCode) +
     (toTokenAmount == null ? 0 : toTokenAmount!.hashCode) +
-    (priceImpactPercentage == null ? 0 : priceImpactPercentage!.hashCode) +
+    (priceImpactPercent == null ? 0 : priceImpactPercent!.hashCode) +
     (router == null ? 0 : router!.hashCode) +
     (swapMode == null ? 0 : swapMode!.hashCode) +
     (tradeFee == null ? 0 : tradeFee!.hashCode);
 
   @override
-  String toString() => 'RouterResult[chainIndex=$chainIndex, dexRouterList=$dexRouterList, estimatedGas=$estimatedGas, fromToken=$fromToken, toToken=$toToken, fromTokenAmount=$fromTokenAmount, toTokenAmount=$toTokenAmount, priceImpactPercentage=$priceImpactPercentage, router=$router, swapMode=$swapMode, tradeFee=$tradeFee]';
+  String toString() => 'RouterResult[chainIndex=$chainIndex, dexRouterList=$dexRouterList, estimateGasFee=$estimateGasFee, fromToken=$fromToken, toToken=$toToken, fromTokenAmount=$fromTokenAmount, toTokenAmount=$toTokenAmount, priceImpactPercent=$priceImpactPercent, router=$router, swapMode=$swapMode, tradeFee=$tradeFee]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -148,10 +148,10 @@ class RouterResult {
       json[r'chainIndex'] = null;
     }
       json[r'dexRouterList'] = this.dexRouterList;
-    if (this.estimatedGas != null) {
-      json[r'estimatedGas'] = this.estimatedGas;
+    if (this.estimateGasFee != null) {
+      json[r'estimateGasFee'] = this.estimateGasFee;
     } else {
-      json[r'estimatedGas'] = null;
+      json[r'estimateGasFee'] = null;
     }
     if (this.fromToken != null) {
       json[r'fromToken'] = this.fromToken;
@@ -173,10 +173,10 @@ class RouterResult {
     } else {
       json[r'toTokenAmount'] = null;
     }
-    if (this.priceImpactPercentage != null) {
-      json[r'priceImpactPercentage'] = this.priceImpactPercentage;
+    if (this.priceImpactPercent != null) {
+      json[r'priceImpactPercent'] = this.priceImpactPercent;
     } else {
-      json[r'priceImpactPercentage'] = null;
+      json[r'priceImpactPercent'] = null;
     }
     if (this.router != null) {
       json[r'router'] = this.router;
@@ -217,12 +217,12 @@ class RouterResult {
       return RouterResult(
         chainIndex: mapValueOfType<String>(json, r'chainIndex'),
         dexRouterList: DexRouter.listFromJson(json[r'dexRouterList']),
-        estimatedGas: mapValueOfType<String>(json, r'estimatedGas'),
+        estimateGasFee: mapValueOfType<String>(json, r'estimateGasFee'),
         fromToken: TokenInfo.fromJson(json[r'fromToken']),
         toToken: TokenInfo.fromJson(json[r'toToken']),
         fromTokenAmount: mapValueOfType<String>(json, r'fromTokenAmount'),
         toTokenAmount: mapValueOfType<String>(json, r'toTokenAmount'),
-        priceImpactPercentage: mapValueOfType<String>(json, r'priceImpactPercentage'),
+        priceImpactPercent: mapValueOfType<String>(json, r'priceImpactPercent'),
         router: mapValueOfType<String>(json, r'router'),
         swapMode: mapValueOfType<String>(json, r'swapMode'),
         tradeFee: mapValueOfType<String>(json, r'tradeFee'),

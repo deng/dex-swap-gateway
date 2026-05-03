@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **from** | **String** |  | [optional] 
 **to** | **String** |  | [optional] 
 **value** | **String** |  | [optional] 
-**gasLimit** | **String** |  | [optional] 
+**gas** | **String** |  | [optional] 
 **gasPrice** | **String** |  | [optional] 
 **maxPriorityFeePerGas** | **String** |  | [optional] 
 **maxSpendAmount** | **String** |  | [optional] 
