@@ -26,7 +26,7 @@ void main() {
       // TODO
     });
 
-    // List<Object> data (default value: const [])
+    // List<Map<String, Object>> data (default value: const [])
     test('to test the property `data`', () async {
       // TODO
     });
