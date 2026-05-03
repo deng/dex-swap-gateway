@@ -87,6 +87,8 @@ const mockEnv = {
   OKX_PROJECT_ID: 'test-project',
   OKX_BASE_URL: 'https://www.okx.com',
   TOKEN_CACHE_TTL: '60',
+  JUPITER_BASE_URL: 'https://api.jup.ag/swap/v2',
+  JUPITER_API_KEY: 'test-jupiter-key',
 };
 
 function mockRequest(method: string, url: string, body?: unknown): Request {
@@ -404,6 +406,186 @@ describe('POST /api/v1/dex-swap/build-approve', () => {
     const callUrl = mockFetch.mock.calls[0][0] as string;
     expect(callUrl).toContain('approveAmount=1000');
     expect(callUrl).not.toContain('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+
+    globalThis.fetch = originalFetch;
+  });
+});
+
+describe('GET /api/v1/jupiter/order', () => {
+  it('should return 400 if inputMint is missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order?outputMint=0x&amount=100&taker=0xUser'),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('Missing required parameters');
+  });
+
+  it('should return 400 if taker is missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order?inputMint=0x&outputMint=0x&amount=100'),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('Missing required parameters');
+  });
+
+  it('should return 400 if all params are missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order'),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('Missing required parameters');
+  });
+
+  it('should proxy request to Jupiter with correct params', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ inputMint: '0xA', transaction: 'base64...' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order?inputMint=0xA&outputMint=0xB&amount=1000&taker=0xUser&slippageBps=50'),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toContain('/order');
+    expect(callUrl).toContain('inputMint=0xA');
+    expect(callUrl).toContain('outputMint=0xB');
+    expect(callUrl).toContain('amount=1000');
+    expect(callUrl).toContain('taker=0xUser');
+    expect(callUrl).toContain('slippageBps=50');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should include x-api-key header in proxy requests', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order?inputMint=0xA&outputMint=0xB&amount=1000&taker=0xUser'),
+      mockEnv,
+    );
+
+    const callOpts = mockFetch.mock.calls[0][1];
+    expect(callOpts.headers['x-api-key']).toBe('test-jupiter-key');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should pass through swapMode and dynamicSlippage params', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order?inputMint=0xA&outputMint=0xB&amount=1000&taker=0xUser&swapMode=ExactOut&dynamicSlippage=true'),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toContain('swapMode=ExactOut');
+    expect(callUrl).toContain('dynamicSlippage=true');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should pass through Jupiter error responses', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'No routes found for given tokens' }), { status: 400 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order?inputMint=0xBAD&outputMint=0xB&amount=1000&taker=0xUser'),
+      mockEnv,
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('No routes found');
+
+    globalThis.fetch = originalFetch;
+  });
+});
+
+describe('POST /api/v1/jupiter/execute', () => {
+  it('should return 400 if body is empty', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/jupiter/execute', {}),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('should return 400 for null body', async () => {
+    const app = await createApp();
+    const opts: RequestInit = { method: 'POST', body: 'null', headers: { 'Content-Type': 'application/json' } };
+    const res = await app.fetch(new Request('http://localhost/api/v1/jupiter/execute', opts), mockEnv);
+    expect(res.status).toBe(400);
+  });
+
+  it('should return 400 if signedTransaction is missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/jupiter/execute', { requestId: 'uuid-123' }),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('Missing required fields');
+  });
+
+  it('should return 400 if requestId is missing', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/jupiter/execute', { signedTransaction: 'base64...' }),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('Missing required fields');
+  });
+
+  it('should proxy request to Jupiter with correct body', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ signature: '5KtPn3...', status: 'Success' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/jupiter/execute', {
+        signedTransaction: 'base64SignedTx',
+        requestId: 'uuid-456',
+      }),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0];
+    const callOpts = mockFetch.mock.calls[0][1];
+    expect(callUrl).toContain('/execute');
+    expect(callOpts.method).toBe('POST');
+    const sentBody = JSON.parse(callOpts.body);
+    expect(sentBody.signedTransaction).toBe('base64SignedTx');
+    expect(sentBody.requestId).toBe('uuid-456');
 
     globalThis.fetch = originalFetch;
   });
