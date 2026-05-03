@@ -1,10 +1,10 @@
 name = "dex-swap-gateway"
 main = "src/index.ts"
-compatibility_date = "2026-05-01"
+compatibility_date = "2025-07-18"
 
-# Route: deployed at https://dex-swap-gateway.dev.zerowallet.io/
+# Production route (requires env-specific zone_id)
 # routes = [
-#   { pattern = "dex-swap-gateway.dev.zerowallet.io/api/v1/*", zone_id = "<zone-id>" }
+#   { pattern = "dex-swap.bithub.pro/api/v1/*", zone_id = "a2377099496ecf3fe85caa580e64b070" }
 # ]
 
 # Environment variables (set via wrangler secret or dashboard)
