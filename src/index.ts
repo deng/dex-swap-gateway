@@ -53,16 +53,16 @@ async function signAsync(
 }
 
 // ---------------------------------------------------------------------------
-// OKX API proxy helpers
+// Proxy helpers
 // ---------------------------------------------------------------------------
-interface OkxRequest {
-  method: string;       // 'GET' | 'POST'
-  path: string;         // e.g. '/api/v6/dex/aggregator/quote'
+interface ProxyRequest {
+  method: string;
+  path: string;
   query?: string;
   body?: string;
 }
 
-async function proxyOkx(env: Env, req: OkxRequest): Promise<Response> {
+async function proxyOkx(env: Env, req: ProxyRequest): Promise<Response> {
   const timestamp = new Date().toISOString();
   const requestPath = req.path + (req.query ? '?' + req.query : '');
   const signature = await signAsync(
@@ -159,7 +159,7 @@ async function getTokens(env: Env, chain: string): Promise<Response> {
 // ---------------------------------------------------------------------------
 // Jupiter API proxy helpers
 // ---------------------------------------------------------------------------
-async function proxyJupiter(env: Env, req: OkxRequest): Promise<Response> {
+async function proxyJupiter(env: Env, req: ProxyRequest): Promise<Response> {
   const url = `${env.JUPITER_BASE_URL}${req.path}${req.query ? '?' + req.query : ''}`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -185,7 +185,9 @@ async function proxyJupiter(env: Env, req: OkxRequest): Promise<Response> {
   }
 
   const respHeaders = new Headers(response.headers);
-  respHeaders.set('Cache-Control', 'public, max-age=2');
+  if (req.method === 'GET' && response.ok) {
+    respHeaders.set('Cache-Control', 'public, max-age=2');
+  }
 
   return new Response(response.body, {
     status: response.status,
@@ -346,8 +348,14 @@ app.get('/api/v1/jupiter/order', async (c) => {
 
 // Jupiter: Execute signed transaction
 app.post('/api/v1/jupiter/execute', async (c) => {
-  const body = await c.req.json();
-  if (!body.signedTransaction || !body.requestId) {
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  if (typeof body !== 'object' || body === null || !body.signedTransaction || !body.requestId) {
     return c.json({ error: 'Missing required fields: signedTransaction, requestId' }, 400);
   }
 
@@ -579,6 +587,11 @@ const openapiSpec = () => {
               name: 'swapMode', in: 'query', required: false,
               schema: { type: 'string', enum: ['ExactIn', 'ExactOut'], default: 'ExactIn' },
               description: '交易模式', example: 'ExactIn',
+            },
+            {
+              name: 'dynamicSlippage', in: 'query', required: false,
+              schema: { type: 'boolean' },
+              description: '是否启用动态滑点',
             },
           ],
           responses: {
