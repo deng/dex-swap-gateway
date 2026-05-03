@@ -484,6 +484,46 @@ describe('GET /api/v1/jupiter/order', () => {
 
     globalThis.fetch = originalFetch;
   });
+
+  it('should pass through swapMode and dynamicSlippage params', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order?inputMint=0xA&outputMint=0xB&amount=1000&taker=0xUser&swapMode=ExactOut&dynamicSlippage=true'),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toContain('swapMode=ExactOut');
+    expect(callUrl).toContain('dynamicSlippage=true');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should pass through Jupiter error responses', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'No routes found for given tokens' }), { status: 400 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/jupiter/order?inputMint=0xBAD&outputMint=0xB&amount=1000&taker=0xUser'),
+      mockEnv,
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('No routes found');
+
+    globalThis.fetch = originalFetch;
+  });
 });
 
 describe('POST /api/v1/jupiter/execute', () => {
