@@ -536,6 +536,13 @@ describe('POST /api/v1/jupiter/execute', () => {
     expect(res.status).toBe(400);
   });
 
+  it('should return 400 for null body', async () => {
+    const app = await createApp();
+    const opts: RequestInit = { method: 'POST', body: 'null', headers: { 'Content-Type': 'application/json' } };
+    const res = await app.fetch(new Request('http://localhost/api/v1/jupiter/execute', opts), mockEnv);
+    expect(res.status).toBe(400);
+  });
+
   it('should return 400 if signedTransaction is missing', async () => {
     const app = await createApp();
     const res = await app.fetch(
