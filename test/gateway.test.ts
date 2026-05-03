@@ -12,7 +12,7 @@ describe('signAsync', () => {
       'test-secret',
       timestamp,
       'GET',
-      '/api/v5/dex/aggregator/quote?chainId=1&fromTokenAddress=0x&toTokenAddress=0x&amount=100',
+      '/api/v6/dex/aggregator/quote?chainIndex=1&fromTokenAddress=0x&toTokenAddress=0x&amount=100',
     );
 
     expect(signature).toBeDefined();
@@ -57,13 +57,25 @@ describe('CHAIN_MAP', () => {
     expect(CHAIN_MAP['btc']).toBeUndefined();
     expect(CHAIN_MAP['sol']).toBeUndefined();
   });
+
+  it('should use correct v6 chainIndex values', async () => {
+    const { CHAIN_MAP } = await import('../src/index');
+    expect(CHAIN_MAP['eth']).toBe('1');
+    expect(CHAIN_MAP['bsc']).toBe('56');
+    expect(CHAIN_MAP['polygon']).toBe('137');
+    expect(CHAIN_MAP['base']).toBe('8453');
+    expect(CHAIN_MAP['arbitrum']).toBe('42161');
+    expect(CHAIN_MAP['optimism']).toBe('10');
+    expect(CHAIN_MAP['sui']).toBe('784');
+    expect(CHAIN_MAP['ton']).toBe('607');
+    expect(CHAIN_MAP['trx']).toBe('195');
+  });
 });
 
 // ---------------------------------------------------------------------------
 // Integration tests: HTTP endpoints
 // ---------------------------------------------------------------------------
 async function createApp() {
-  // Hono app requires dynamic import because index.ts uses top-level `new Hono()`
   const mod = await import('../src/index');
   return mod.default;
 }
@@ -78,10 +90,10 @@ const mockEnv = {
 };
 
 function mockRequest(method: string, url: string, body?: unknown): Request {
-  const opts: RequestInit & { duplex?: string } = { method };
+  const opts: RequestInit = { method };
   if (body) {
     opts.body = JSON.stringify(body);
-    opts.headers = { 'Content-Type': 'application/json' };
+    (opts as any).headers = { 'Content-Type': 'application/json' };
   }
   return new Request(url, opts);
 }
@@ -145,6 +157,45 @@ describe('GET /api/v1/dex-swap/quote', () => {
 });
 
 describe('POST /api/v1/dex-swap/build-tx', () => {
+  it('should use v6 API path and GET method with query params for swap', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-tx', {
+        chain: 'eth',
+        fromToken: '0xFrom',
+        toToken: '0xTo',
+        amount: '1000000',
+        fromAddress: '0xUser',
+        slippage: '0.5',
+      }),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0];
+    const callOpts = mockFetch.mock.calls[0][1];
+
+    // Verify v6 API path
+    expect(callUrl).toContain('/api/v6/dex/aggregator/swap');
+    // Verify GET method
+    expect(callOpts.method).toBe('GET');
+    // Verify query params
+    expect(callUrl).toContain('chainIndex=1');
+    expect(callUrl).toContain('fromTokenAddress=0xFrom');
+    expect(callUrl).toContain('toTokenAddress=0xTo');
+    expect(callUrl).toContain('amount=1000000');
+    expect(callUrl).toContain('slippagePercent=0.5');
+    expect(callUrl).toContain('userWalletAddress=0xUser');
+    expect(callUrl).toContain('swapMode=exactIn');
+
+    globalThis.fetch = originalFetch;
+  });
+
   it('should return 400 for unsupported chain', async () => {
     const app = await createApp();
     const res = await app.fetch(
@@ -162,21 +213,7 @@ describe('POST /api/v1/dex-swap/build-tx', () => {
 });
 
 describe('POST /api/v1/dex-swap/build-approve', () => {
-  it('should return 400 for unsupported chain', async () => {
-    const app = await createApp();
-    const res = await app.fetch(
-      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-approve', {
-        chain: 'btc',
-        token: '0x',
-        spender: '0x',
-      }),
-      mockEnv,
-    );
-    expect(res.status).toBe(400);
-  });
-
-  it('should use MaxUint256 as default amount', async () => {
-    // Spy on global fetch to verify the proxied request body
+  it('should use v6 API path and GET method with query params for approve', async () => {
     const originalFetch = globalThis.fetch;
     const mockFetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
@@ -193,14 +230,57 @@ describe('POST /api/v1/dex-swap/build-approve', () => {
       mockEnv,
     );
 
-    // Verify the proxied request body includes MaxUint256
-    const callArgs = mockFetch.mock.calls[0];
-    const proxiedBody = JSON.parse(callArgs[1].body as string);
-    expect(proxiedBody.tokenAddress).toBe('0xToken');
-    expect(proxiedBody.spender).toBe('0xSpender');
-    expect(proxiedBody.amount).toContain('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+    const callUrl = mockFetch.mock.calls[0][0];
+    const callOpts = mockFetch.mock.calls[0][1];
+
+    // Verify v6 API path
+    expect(callUrl).toContain('/api/v6/dex/aggregator/approve-transaction');
+    // Verify GET method
+    expect(callOpts.method).toBe('GET');
+    // Verify query params (v6 uses tokenContractAddress, approveAmount; no spender)
+    expect(callUrl).toContain('chainIndex=1');
+    expect(callUrl).toContain('tokenContractAddress=0xToken');
+    expect(callUrl).toContain('approveAmount');
+    expect(callUrl).not.toContain('spender');
 
     globalThis.fetch = originalFetch;
+  });
+
+  it('should use MaxUint256 as default approveAmount', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-approve', {
+        chain: 'eth',
+        token: '0xToken',
+        spender: '0xSpender',
+      }),
+      mockEnv,
+    );
+
+    // Verify the proxied request URL includes MaxUint256 default
+    const callUrl = mockFetch.mock.calls[0][0];
+    expect(callUrl).toContain('approveAmount=115792089237316195423570985008687907853269984665640564039457584007913129639935');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should return 400 for unsupported chain', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-approve', {
+        chain: 'btc',
+        token: '0x',
+        spender: '0x',
+      }),
+      mockEnv,
+    );
+    expect(res.status).toBe(400);
   });
 });
 
@@ -219,5 +299,31 @@ describe('Cache control headers', () => {
     // Health endpoint should have default/minimal caching
     const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/health'), mockEnv);
     expect(res.headers.get('Cache-Control')).toBeDefined();
+  });
+});
+
+describe('OpenAPI documentation', () => {
+  it('should serve OpenAPI spec at /api/v1/openapi.json', async () => {
+    const app = await createApp();
+    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/openapi.json'), mockEnv);
+    expect(res.status).toBe(200);
+    const spec = await res.json();
+    expect(spec.openapi).toBe('3.0.3');
+    expect(spec.info.title).toBe('ZeroWallet DEX Swap Gateway');
+    expect(spec.paths['/api/v1/health']).toBeDefined();
+    expect(spec.paths['/api/v1/dex-swap/tokens']).toBeDefined();
+    expect(spec.paths['/api/v1/dex-swap/quote']).toBeDefined();
+    expect(spec.paths['/api/v1/dex-swap/build-tx']).toBeDefined();
+    expect(spec.paths['/api/v1/dex-swap/build-approve']).toBeDefined();
+  });
+
+  it('should serve Swagger UI at /api/v1/docs', async () => {
+    const app = await createApp();
+    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/docs'), mockEnv);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain('swagger-ui');
+    expect(text).toContain('ZeroWallet DEX Swap Gateway');
+    expect(text).toContain('/api/v1/openapi.json');
   });
 });
