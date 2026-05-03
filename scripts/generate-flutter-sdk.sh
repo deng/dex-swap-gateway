@@ -13,6 +13,16 @@ echo "  Spec URL: $SPEC_URL"
 echo "  Output:   $OUTPUT_DIR"
 echo ""
 
+# Check required tools
+if ! command -v openapi-generator &> /dev/null; then
+  echo "Error: openapi-generator not found. Install it via:"
+  echo "  brew install openapi-generator"
+  echo "  # or"
+  echo "  npm install @openapitools/openapi-generator-cli -g"
+  echo "  # or download from https://openapi-generator.tech/docs/installation"
+  exit 1
+fi
+
 # Remove old SDK
 rm -rf "$OUTPUT_DIR"
 

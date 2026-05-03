@@ -91,9 +91,9 @@ const mockEnv = {
 
 function mockRequest(method: string, url: string, body?: unknown): Request {
   const opts: RequestInit = { method };
-  if (body) {
+  if (body !== undefined) {
     opts.body = JSON.stringify(body);
-    (opts as any).headers = { 'Content-Type': 'application/json' };
+    opts.headers = { 'Content-Type': 'application/json' };
   }
   return new Request(url, opts);
 }
