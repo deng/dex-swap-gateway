@@ -16,12 +16,14 @@ class QuoteData {
     this.chainIndex,
     this.routerResult,
     this.dexRouterList = const [],
-    this.estimateGasFee,
+    this.estimatedGas,
     this.fromToken,
     this.toToken,
     this.fromTokenAmount,
     this.toTokenAmount,
-    this.priceImpactPercent,
+    this.price,
+    this.priceImpactPercentage,
+    this.quoteDeadline,
     this.router,
     this.swapMode,
     this.tradeFee,
@@ -51,7 +53,7 @@ class QuoteData {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? estimateGasFee;
+  String? estimatedGas;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -91,7 +93,23 @@ class QuoteData {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? priceImpactPercent;
+  String? price;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? priceImpactPercentage;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? quoteDeadline;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -122,12 +140,14 @@ class QuoteData {
     other.chainIndex == chainIndex &&
     other.routerResult == routerResult &&
     _deepEquality.equals(other.dexRouterList, dexRouterList) &&
-    other.estimateGasFee == estimateGasFee &&
+    other.estimatedGas == estimatedGas &&
     other.fromToken == fromToken &&
     other.toToken == toToken &&
     other.fromTokenAmount == fromTokenAmount &&
     other.toTokenAmount == toTokenAmount &&
-    other.priceImpactPercent == priceImpactPercent &&
+    other.price == price &&
+    other.priceImpactPercentage == priceImpactPercentage &&
+    other.quoteDeadline == quoteDeadline &&
     other.router == router &&
     other.swapMode == swapMode &&
     other.tradeFee == tradeFee;
@@ -138,18 +158,20 @@ class QuoteData {
     (chainIndex == null ? 0 : chainIndex!.hashCode) +
     (routerResult == null ? 0 : routerResult!.hashCode) +
     (dexRouterList.hashCode) +
-    (estimateGasFee == null ? 0 : estimateGasFee!.hashCode) +
+    (estimatedGas == null ? 0 : estimatedGas!.hashCode) +
     (fromToken == null ? 0 : fromToken!.hashCode) +
     (toToken == null ? 0 : toToken!.hashCode) +
     (fromTokenAmount == null ? 0 : fromTokenAmount!.hashCode) +
     (toTokenAmount == null ? 0 : toTokenAmount!.hashCode) +
-    (priceImpactPercent == null ? 0 : priceImpactPercent!.hashCode) +
+    (price == null ? 0 : price!.hashCode) +
+    (priceImpactPercentage == null ? 0 : priceImpactPercentage!.hashCode) +
+    (quoteDeadline == null ? 0 : quoteDeadline!.hashCode) +
     (router == null ? 0 : router!.hashCode) +
     (swapMode == null ? 0 : swapMode!.hashCode) +
     (tradeFee == null ? 0 : tradeFee!.hashCode);
 
   @override
-  String toString() => 'QuoteData[chainIndex=$chainIndex, routerResult=$routerResult, dexRouterList=$dexRouterList, estimateGasFee=$estimateGasFee, fromToken=$fromToken, toToken=$toToken, fromTokenAmount=$fromTokenAmount, toTokenAmount=$toTokenAmount, priceImpactPercent=$priceImpactPercent, router=$router, swapMode=$swapMode, tradeFee=$tradeFee]';
+  String toString() => 'QuoteData[chainIndex=$chainIndex, routerResult=$routerResult, dexRouterList=$dexRouterList, estimatedGas=$estimatedGas, fromToken=$fromToken, toToken=$toToken, fromTokenAmount=$fromTokenAmount, toTokenAmount=$toTokenAmount, price=$price, priceImpactPercentage=$priceImpactPercentage, quoteDeadline=$quoteDeadline, router=$router, swapMode=$swapMode, tradeFee=$tradeFee]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -164,10 +186,10 @@ class QuoteData {
       json[r'routerResult'] = null;
     }
       json[r'dexRouterList'] = this.dexRouterList;
-    if (this.estimateGasFee != null) {
-      json[r'estimateGasFee'] = this.estimateGasFee;
+    if (this.estimatedGas != null) {
+      json[r'estimatedGas'] = this.estimatedGas;
     } else {
-      json[r'estimateGasFee'] = null;
+      json[r'estimatedGas'] = null;
     }
     if (this.fromToken != null) {
       json[r'fromToken'] = this.fromToken;
@@ -189,10 +211,20 @@ class QuoteData {
     } else {
       json[r'toTokenAmount'] = null;
     }
-    if (this.priceImpactPercent != null) {
-      json[r'priceImpactPercent'] = this.priceImpactPercent;
+    if (this.price != null) {
+      json[r'price'] = this.price;
     } else {
-      json[r'priceImpactPercent'] = null;
+      json[r'price'] = null;
+    }
+    if (this.priceImpactPercentage != null) {
+      json[r'priceImpactPercentage'] = this.priceImpactPercentage;
+    } else {
+      json[r'priceImpactPercentage'] = null;
+    }
+    if (this.quoteDeadline != null) {
+      json[r'quoteDeadline'] = this.quoteDeadline;
+    } else {
+      json[r'quoteDeadline'] = null;
     }
     if (this.router != null) {
       json[r'router'] = this.router;
@@ -234,12 +266,14 @@ class QuoteData {
         chainIndex: mapValueOfType<String>(json, r'chainIndex'),
         routerResult: RouterResult.fromJson(json[r'routerResult']),
         dexRouterList: DexRouter.listFromJson(json[r'dexRouterList']),
-        estimateGasFee: mapValueOfType<String>(json, r'estimateGasFee'),
+        estimatedGas: mapValueOfType<String>(json, r'estimatedGas'),
         fromToken: TokenInfo.fromJson(json[r'fromToken']),
         toToken: TokenInfo.fromJson(json[r'toToken']),
         fromTokenAmount: mapValueOfType<String>(json, r'fromTokenAmount'),
         toTokenAmount: mapValueOfType<String>(json, r'toTokenAmount'),
-        priceImpactPercent: mapValueOfType<String>(json, r'priceImpactPercent'),
+        price: mapValueOfType<String>(json, r'price'),
+        priceImpactPercentage: mapValueOfType<String>(json, r'priceImpactPercentage'),
+        quoteDeadline: mapValueOfType<String>(json, r'quoteDeadline'),
         router: mapValueOfType<String>(json, r'router'),
         swapMode: mapValueOfType<String>(json, r'swapMode'),
         tradeFee: mapValueOfType<String>(json, r'tradeFee'),

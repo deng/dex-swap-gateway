@@ -14,6 +14,9 @@ class ApproveTransactionData {
   /// Returns a new [ApproveTransactionData] instance.
   ApproveTransactionData({
     this.dexContractAddress,
+    this.data,
+    this.to,
+    this.gasLimit,
   });
 
   ///
@@ -24,17 +27,47 @@ class ApproveTransactionData {
   ///
   String? dexContractAddress;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? data;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? to;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? gasLimit;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is ApproveTransactionData &&
-    other.dexContractAddress == dexContractAddress;
+    other.dexContractAddress == dexContractAddress &&
+    other.data == data &&
+    other.to == to &&
+    other.gasLimit == gasLimit;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (dexContractAddress == null ? 0 : dexContractAddress!.hashCode);
+    (dexContractAddress == null ? 0 : dexContractAddress!.hashCode) +
+    (data == null ? 0 : data!.hashCode) +
+    (to == null ? 0 : to!.hashCode) +
+    (gasLimit == null ? 0 : gasLimit!.hashCode);
 
   @override
-  String toString() => 'ApproveTransactionData[dexContractAddress=$dexContractAddress]';
+  String toString() => 'ApproveTransactionData[dexContractAddress=$dexContractAddress, data=$data, to=$to, gasLimit=$gasLimit]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -42,6 +75,21 @@ class ApproveTransactionData {
       json[r'dexContractAddress'] = this.dexContractAddress;
     } else {
       json[r'dexContractAddress'] = null;
+    }
+    if (this.data != null) {
+      json[r'data'] = this.data;
+    } else {
+      json[r'data'] = null;
+    }
+    if (this.to != null) {
+      json[r'to'] = this.to;
+    } else {
+      json[r'to'] = null;
+    }
+    if (this.gasLimit != null) {
+      json[r'gasLimit'] = this.gasLimit;
+    } else {
+      json[r'gasLimit'] = null;
     }
     return json;
   }
@@ -66,6 +114,9 @@ class ApproveTransactionData {
 
       return ApproveTransactionData(
         dexContractAddress: mapValueOfType<String>(json, r'dexContractAddress'),
+        data: mapValueOfType<String>(json, r'data'),
+        to: mapValueOfType<String>(json, r'to'),
+        gasLimit: mapValueOfType<String>(json, r'gasLimit'),
       );
     }
     return null;

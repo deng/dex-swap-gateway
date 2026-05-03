@@ -36,8 +36,8 @@ void main() {
       // TODO
     });
 
-    // String gas
-    test('to test the property `gas`', () async {
+    // String gasLimit
+    test('to test the property `gasLimit`', () async {
       // TODO
     });
 
