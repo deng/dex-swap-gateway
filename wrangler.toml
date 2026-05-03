@@ -2,9 +2,10 @@ name = "dex-swap-gateway"
 main = "src/index.ts"
 compatibility_date = "2025-07-18"
 
-routes = [
-  { pattern = "dex-swap.bithub.pro/api/v1/*", zone_id = "a2377099496ecf3fe85caa580e64b070" }
-]
+# Production route (requires env-specific zone_id)
+# routes = [
+#   { pattern = "dex-swap.bithub.pro/api/v1/*", zone_id = "a2377099496ecf3fe85caa580e64b070" }
+# ]
 
 # Environment variables (set via wrangler secret or dashboard)
 [vars]
