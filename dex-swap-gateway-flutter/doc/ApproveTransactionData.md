@@ -9,6 +9,9 @@ import 'package:dex_swap_gateway/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **dexContractAddress** | **String** |  | [optional] 
+**data** | **String** |  | [optional] 
+**to** | **String** |  | [optional] 
+**gasLimit** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

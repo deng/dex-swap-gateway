@@ -21,6 +21,21 @@ void main() {
       // TODO
     });
 
+    // String data
+    test('to test the property `data`', () async {
+      // TODO
+    });
+
+    // String to
+    test('to test the property `to`', () async {
+      // TODO
+    });
+
+    // String gasLimit
+    test('to test the property `gasLimit`', () async {
+      // TODO
+    });
+
 
   });
 
