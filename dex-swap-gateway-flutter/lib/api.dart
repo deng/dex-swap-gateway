@@ -29,6 +29,7 @@ part 'auth/http_basic_auth.dart';
 part 'auth/http_bearer_auth.dart';
 
 part 'api/dex_swap_api.dart';
+part 'api/jupiter_api.dart';
 part 'api/system_api.dart';
 
 part 'model/approve_response.dart';
@@ -39,6 +40,11 @@ part 'model/dex_protocol.dart';
 part 'model/dex_router.dart';
 part 'model/gateway_error_response.dart';
 part 'model/health_response.dart';
+part 'model/jupiter_execute_request.dart';
+part 'model/jupiter_execute_response.dart';
+part 'model/jupiter_order_response.dart';
+part 'model/jupiter_order_response_route_plan_inner.dart';
+part 'model/jupiter_swap_info.dart';
 part 'model/okx_response.dart';
 part 'model/quote_data.dart';
 part 'model/quote_response.dart';
