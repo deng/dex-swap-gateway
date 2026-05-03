@@ -38,6 +38,15 @@ pubDescription="ZeroWallet DEX Swap Gateway API client for Flutter",\
 useJsonKey=true,\
 sortParamsByRequiredFlag=true
 
+# Fix known openapi-generator Dart template bug:
+# `{ type: 'object', additionalProperties: true }` in array items generates
+# `Map.listFromJson()` which doesn't exist. Patch to use `.cast()` instead.
+OKX_RESPONSE="$OUTPUT_DIR/lib/model/okx_response.dart"
+if grep -q 'Map.listFromJson' "$OKX_RESPONSE" 2>/dev/null; then
+  sed -i '' "s/Map\.listFromJson(json\[r'data'\])/(json[r'data'] as List).cast<Map<String, Object>>()/" "$OKX_RESPONSE"
+  echo "  Patched: okx_response.dart (Map.listFromJson -> cast)"
+fi
+
 echo ""
 echo "=== Done ==="
 echo "Generated $(find "$OUTPUT_DIR/lib" -name '*.dart' | wc -l | xargs) Dart files"
