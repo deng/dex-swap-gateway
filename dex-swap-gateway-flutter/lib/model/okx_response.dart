@@ -34,7 +34,7 @@ class OkxResponse {
   ///
   String? msg;
 
-  List<Object> data;
+  List<Map<String, Object>> data;
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is OkxResponse &&
@@ -89,7 +89,7 @@ class OkxResponse {
       return OkxResponse(
         code: mapValueOfType<String>(json, r'code'),
         msg: mapValueOfType<String>(json, r'msg'),
-        data: Object.listFromJson(json[r'data']),
+        data: (json[r'data'] as List).cast<Map<String, Object>>(),
       );
     }
     return null;
