@@ -26,8 +26,8 @@ void main() {
       // TODO
     });
 
-    // String estimatedGas
-    test('to test the property `estimatedGas`', () async {
+    // String estimateGasFee
+    test('to test the property `estimateGasFee`', () async {
       // TODO
     });
 
@@ -51,8 +51,8 @@ void main() {
       // TODO
     });
 
-    // String priceImpactPercentage
-    test('to test the property `priceImpactPercentage`', () async {
+    // String priceImpactPercent
+    test('to test the property `priceImpactPercent`', () async {
       // TODO
     });
 
