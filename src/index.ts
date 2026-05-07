@@ -373,7 +373,7 @@ app.post('/api/v1/jupiter/execute', async (c) => {
 // Export for Cloudflare Worker
 // ---------------------------------------------------------------------------
 // Jupiter: Get token list
-app.get('/api/v1/jupiter/tokens', async (c) => {
+app.get('/api/v1/jupiter/sol-tokens', async (c) => {
   return proxyJupiter(c.env, {
     method: 'GET',
     path: '/token-list',
@@ -626,7 +626,7 @@ const openapiSpec = () => {
           },
         },
       },
-      '/api/v1/jupiter/tokens': {
+      '/api/v1/jupiter/sol-tokens': {
         get: {
           summary: '获取 Jupiter 支持的所有代币列表',
           description: '获取 Jupiter Swap 聚合器在 Solana 链上支持的所有代币。数据来源：Jupiter Token List API。',
