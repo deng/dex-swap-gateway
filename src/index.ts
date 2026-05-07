@@ -369,20 +369,19 @@ app.post('/api/v1/jupiter/execute', async (c) => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Export for Cloudflare Worker
-// ---------------------------------------------------------------------------
-// Jupiter: Get token list
+// Jupiter: Get token list (Jupiter Token API V2)
 app.get('/api/v1/jupiter/sol-tokens', async (c) => {
+  // Get verified tokens via Token API V2 tag endpoint
   return proxyJupiter(c.env, {
     method: 'GET',
-    path: '/token-list',
+    path: '/tag',
+    query: 'query=verified',
     baseUrl: c.env.JUPITER_TOKENS_BASE_URL,
   });
 });
 
 // ---------------------------------------------------------------------------
-// OpenAPI spec
+// Export for Cloudflare Worker
 // ---------------------------------------------------------------------------
 const openapiSpec = () => {
   const chains = Object.keys(CHAIN_MAP);
@@ -628,8 +627,8 @@ const openapiSpec = () => {
       },
       '/api/v1/jupiter/sol-tokens': {
         get: {
-          summary: '获取 Jupiter 支持的所有代币列表',
-          description: '获取 Jupiter Swap 聚合器在 Solana 链上支持的所有代币。数据来源：Jupiter Token List API。',
+          summary: '获取 Jupiter 支持的 Solana 代币列表',
+          description: '获取 Jupiter Token API v2 验证过的 Solana 链上代币列表。',
           tags: ['Jupiter'],
           responses: {
             '200': {
