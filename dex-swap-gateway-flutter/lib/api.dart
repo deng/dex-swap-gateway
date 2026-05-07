@@ -45,6 +45,7 @@ part 'model/jupiter_execute_response.dart';
 part 'model/jupiter_order_response.dart';
 part 'model/jupiter_order_response_route_plan_inner.dart';
 part 'model/jupiter_swap_info.dart';
+part 'model/jupiter_token_data.dart';
 part 'model/okx_response.dart';
 part 'model/quote_data.dart';
 part 'model/quote_response.dart';

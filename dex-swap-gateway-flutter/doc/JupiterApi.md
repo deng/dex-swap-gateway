@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**apiV1JupiterExecutePost**](JupiterApi.md#apiv1jupiterexecutepost) | **POST** /api/v1/jupiter/execute | 执行 Jupiter Swap 交易
 [**apiV1JupiterOrderGet**](JupiterApi.md#apiv1jupiterorderget) | **GET** /api/v1/jupiter/order | 获取 Jupiter 报价和交易
+[**apiV1JupiterTokensGet**](JupiterApi.md#apiv1jupitertokensget) | **GET** /api/v1/jupiter/tokens | 获取 Jupiter 支持的所有代币列表
 
 
 # **apiV1JupiterExecutePost**
@@ -99,6 +100,45 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**JupiterOrderResponse**](JupiterOrderResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **apiV1JupiterTokensGet**
+> List<JupiterTokenData> apiV1JupiterTokensGet()
+
+获取 Jupiter 支持的所有代币列表
+
+获取 Jupiter Swap 聚合器在 Solana 链上支持的所有代币。数据来源：Jupiter Token List API。
+
+### Example
+```dart
+import 'package:dex_swap_gateway/api.dart';
+
+final api_instance = JupiterApi();
+
+try {
+    final result = api_instance.apiV1JupiterTokensGet();
+    print(result);
+} catch (e) {
+    print('Exception when calling JupiterApi->apiV1JupiterTokensGet: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**List<JupiterTokenData>**](JupiterTokenData.md)
 
 ### Authorization
 
