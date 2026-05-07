@@ -527,7 +527,7 @@ describe('GET /api/v1/jupiter/order', () => {
   });
 });
 
-describe('GET /api/v1/jupiter/sol-tokens', () => {
+describe('GET /api/v1/jupiter/tokens', () => {
   let originalFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
@@ -548,7 +548,7 @@ describe('GET /api/v1/jupiter/sol-tokens', () => {
     );
 
     const app = await createApp();
-    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/sol-tokens'), mockEnv);
+    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
 
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -561,7 +561,7 @@ describe('GET /api/v1/jupiter/sol-tokens', () => {
     globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
 
     const app = await createApp();
-    await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/sol-tokens'), mockEnv);
+    await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
 
     const callUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
     // Should use JUPITER_TOKENS_BASE_URL (v2), not JUPITER_BASE_URL
@@ -573,7 +573,7 @@ describe('GET /api/v1/jupiter/sol-tokens', () => {
     globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
 
     const app = await createApp();
-    await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/sol-tokens'), mockEnv);
+    await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
 
     const callOpts = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
     expect(callOpts.headers['x-api-key']).toBe('test-jupiter-key');
@@ -583,7 +583,7 @@ describe('GET /api/v1/jupiter/sol-tokens', () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network failure'));
 
     const app = await createApp();
-    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/sol-tokens'), mockEnv);
+    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
 
     expect(res.status).toBe(502);
     const body = await res.json();
@@ -596,7 +596,7 @@ describe('GET /api/v1/jupiter/sol-tokens', () => {
     );
 
     const app = await createApp();
-    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/sol-tokens'), mockEnv);
+    const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
 
     expect(res.headers.get('Cache-Control')).toBe('public, max-age=2');
   });
@@ -788,7 +788,7 @@ describe('OpenAPI documentation', () => {
     expect(spec.paths['/api/v1/dex-swap/quote']).toBeDefined();
     expect(spec.paths['/api/v1/dex-swap/build-tx']).toBeDefined();
     expect(spec.paths['/api/v1/dex-swap/build-approve']).toBeDefined();
-    expect(spec.paths['/api/v1/jupiter/sol-tokens']).toBeDefined();
+    expect(spec.paths['/api/v1/jupiter/tokens']).toBeDefined();
     expect(spec.paths['/api/v1/jupiter/order']).toBeDefined();
     expect(spec.paths['/api/v1/jupiter/execute']).toBeDefined();
   });

@@ -370,7 +370,7 @@ app.post('/api/v1/jupiter/execute', async (c) => {
 });
 
 // Jupiter: Get token list (Jupiter Token API V2)
-app.get('/api/v1/jupiter/sol-tokens', async (c) => {
+app.get('/api/v1/jupiter/tokens', async (c) => {
   // Get verified tokens via Token API V2 tag endpoint
   return proxyJupiter(c.env, {
     method: 'GET',
@@ -625,7 +625,7 @@ const openapiSpec = () => {
           },
         },
       },
-      '/api/v1/jupiter/sol-tokens': {
+      '/api/v1/jupiter/tokens': {
         get: {
           summary: '获取 Jupiter 支持的 Solana 代币列表',
           description: '获取 Jupiter Token API v2 验证过的 Solana 链上代币列表。',
