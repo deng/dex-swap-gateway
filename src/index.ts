@@ -60,6 +60,7 @@ interface ProxyRequest {
   path: string;
   query?: string;
   body?: string;
+  baseUrl?: string; // optional base URL override (e.g., for Jupiter tokens API)
 }
 
 async function proxyOkx(env: Env, req: ProxyRequest): Promise<Response> {
@@ -160,7 +161,8 @@ async function getTokens(env: Env, chain: string): Promise<Response> {
 // Jupiter API proxy helpers
 // ---------------------------------------------------------------------------
 async function proxyJupiter(env: Env, req: ProxyRequest): Promise<Response> {
-  const url = `${env.JUPITER_BASE_URL}${req.path}${req.query ? '?' + req.query : ''}`;
+  const base = req.baseUrl ?? env.JUPITER_BASE_URL;
+  const url = `${base}${req.path}${req.query ? '?' + req.query : ''}`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-api-key': env.JUPITER_API_KEY,
@@ -369,6 +371,15 @@ app.post('/api/v1/jupiter/execute', async (c) => {
 // ---------------------------------------------------------------------------
 // Export for Cloudflare Worker
 // ---------------------------------------------------------------------------
+// Jupiter: Get token list
+app.get('/api/v1/jupiter/tokens', async (c) => {
+  return proxyJupiter(c.env, {
+    method: 'GET',
+    path: '/token-list',
+    baseUrl: 'https://api.jup.ag/tokens/v1',
+  });
+});
+
 // ---------------------------------------------------------------------------
 // OpenAPI spec
 // ---------------------------------------------------------------------------
@@ -605,6 +616,34 @@ const openapiSpec = () => {
             },
             '400': {
               description: '参数校验失败',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/GatewayErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api/v1/jupiter/tokens': {
+        get: {
+          summary: '获取 Jupiter 支持的所有代币列表',
+          description: '获取 Jupiter Swap 聚合器在 Solana 链上支持的所有代币。数据来源：Jupiter Token List API。',
+          tags: ['Jupiter'],
+          responses: {
+            '200': {
+              description: '代币列表',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/JupiterTokenData' },
+                  },
+                },
+              },
+            },
+            '502': {
+              description: '上游 API 不可达',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/GatewayErrorResponse' },
@@ -918,6 +957,24 @@ const openapiSpec = () => {
             signature: { type: 'string', description: '链上交易签名', example: '5KtPn3...' },
             status: { type: 'string', enum: ['Success', 'Failed'], example: 'Success' },
             error: { type: 'string', nullable: true, example: null },
+          },
+        },
+        JupiterTokenData: {
+          type: 'object',
+          description: 'Jupiter 支持的 Solana 代币信息',
+          properties: {
+            address: { type: 'string', description: '代币 Mint 地址', example: 'So11111111111111111111111111111111111111112' },
+            name: { type: 'string', description: '代币名称', example: 'Wrapped SOL' },
+            symbol: { type: 'string', description: '代币符号', example: 'SOL' },
+            decimals: { type: 'integer', description: '精度', example: 9 },
+            logoURI: { type: 'string', description: '代币图标 URL', example: 'https://example.com/sol.png' },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: '代币标签',
+              example: ['wormhole', 'native'],
+            },
+            verified: { type: 'boolean', description: '是否经过验证', example: true },
           },
         },
       },
