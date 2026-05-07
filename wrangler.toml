@@ -15,6 +15,8 @@ OKX_BASE_URL = "https://www.okx.com"
 TOKEN_CACHE_TTL = 60
 # Jupiter Swap API v2 (Solana DEX aggregation)
 JUPITER_BASE_URL = "https://api.jup.ag/swap/v2"
+# Jupiter Token List API (Solana token discovery)
+JUPITER_TOKENS_BASE_URL = "https://api.jup.ag/tokens/v1"
 
 # Secrets (set via `npx wrangler secret put` — not stored in this file):
 #   OKX_API_KEY

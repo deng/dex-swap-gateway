@@ -88,6 +88,7 @@ const mockEnv = {
   OKX_BASE_URL: 'https://www.okx.com',
   TOKEN_CACHE_TTL: '60',
   JUPITER_BASE_URL: 'https://api.jup.ag/swap/v2',
+  JUPITER_TOKENS_BASE_URL: 'https://api.jup.ag/tokens/v1',
   JUPITER_API_KEY: 'test-jupiter-key',
 };
 
@@ -527,16 +528,24 @@ describe('GET /api/v1/jupiter/order', () => {
 });
 
 describe('GET /api/v1/jupiter/tokens', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
   it('should return 200 with token list from Jupiter', async () => {
-    const originalFetch = globalThis.fetch;
     const mockTokenData = [
       { address: 'So11111111111111111111111111111111111111112', name: 'Wrapped SOL', symbol: 'SOL', decimals: 9, logoURI: 'https://example.com/sol.png', verified: true },
       { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', name: 'USD Coin', symbol: 'USDC', decimals: 6, logoURI: 'https://example.com/usdc.png', verified: true },
     ];
-    const mockFetch = vi.fn().mockResolvedValue(
+    globalThis.fetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(mockTokenData), { status: 200 }),
     );
-    globalThis.fetch = mockFetch;
 
     const app = await createApp();
     const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
@@ -546,46 +555,32 @@ describe('GET /api/v1/jupiter/tokens', () => {
     expect(body).toHaveLength(2);
     expect(body[0].symbol).toBe('SOL');
     expect(body[1].symbol).toBe('USDC');
-
-    globalThis.fetch = originalFetch;
   });
 
   it('should proxy to Jupiter tokens API with correct URL', async () => {
-    const originalFetch = globalThis.fetch;
-    const mockFetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
-    globalThis.fetch = mockFetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
 
     const app = await createApp();
     await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
 
-    const callUrl = mockFetch.mock.calls[0][0] as string;
-    // Should use the tokens base URL, not the swap base URL
-    expect(callUrl).toContain('api.jup.ag/tokens/v1');
-    expect(callUrl).toContain('/token-list');
-    // Should NOT use the swap base URL
+    const callUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    // Should use JUPITER_TOKENS_BASE_URL, not JUPITER_BASE_URL
+    expect(callUrl).toBe('https://api.jup.ag/tokens/v1/token-list');
     expect(callUrl).not.toContain('/swap/v2');
-
-    globalThis.fetch = originalFetch;
   });
 
   it('should include x-api-key header in proxy requests', async () => {
-    const originalFetch = globalThis.fetch;
-    const mockFetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
-    globalThis.fetch = mockFetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
 
     const app = await createApp();
     await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
 
-    const callOpts = mockFetch.mock.calls[0][1];
+    const callOpts = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
     expect(callOpts.headers['x-api-key']).toBe('test-jupiter-key');
-
-    globalThis.fetch = originalFetch;
   });
 
   it('should return 502 on Jupiter API failure', async () => {
-    const originalFetch = globalThis.fetch;
-    const mockFetch = vi.fn().mockRejectedValue(new Error('Network failure'));
-    globalThis.fetch = mockFetch;
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network failure'));
 
     const app = await createApp();
     const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
@@ -593,23 +588,17 @@ describe('GET /api/v1/jupiter/tokens', () => {
     expect(res.status).toBe(502);
     const body = await res.json();
     expect(body.error).toContain('Jupiter API request failed');
-
-    globalThis.fetch = originalFetch;
   });
 
   it('should set Cache-Control on successful responses', async () => {
-    const originalFetch = globalThis.fetch;
-    const mockFetch = vi.fn().mockResolvedValue(
+    globalThis.fetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify([{ address: '0x' }]), { status: 200 }),
     );
-    globalThis.fetch = mockFetch;
 
     const app = await createApp();
     const res = await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/tokens'), mockEnv);
 
     expect(res.headers.get('Cache-Control')).toBe('public, max-age=2');
-
-    globalThis.fetch = originalFetch;
   });
 });
 

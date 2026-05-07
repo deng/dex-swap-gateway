@@ -89,7 +89,7 @@ class OkxResponse {
       return OkxResponse(
         code: mapValueOfType<String>(json, r'code'),
         msg: mapValueOfType<String>(json, r'msg'),
-        data: Map.listFromJson(json[r'data']),
+        data: json[r'data'] is List ? (json[r'data'] as List).cast<Map<String, Object>>() : [],
       );
     }
     return null;

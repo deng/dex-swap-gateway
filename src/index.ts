@@ -12,6 +12,7 @@ export interface Env {
   OKX_BASE_URL: string;
   TOKEN_CACHE_TTL: string; // seconds, e.g. "60"
   JUPITER_BASE_URL: string;
+  JUPITER_TOKENS_BASE_URL: string;
   JUPITER_API_KEY: string;
 }
 
@@ -376,7 +377,7 @@ app.get('/api/v1/jupiter/tokens', async (c) => {
   return proxyJupiter(c.env, {
     method: 'GET',
     path: '/token-list',
-    baseUrl: 'https://api.jup.ag/tokens/v1',
+    baseUrl: c.env.JUPITER_TOKENS_BASE_URL,
   });
 });
 
