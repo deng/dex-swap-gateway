@@ -88,7 +88,7 @@ const mockEnv = {
   OKX_BASE_URL: 'https://www.okx.com',
   TOKEN_CACHE_TTL: '60',
   JUPITER_BASE_URL: 'https://api.jup.ag/swap/v2',
-  JUPITER_TOKENS_BASE_URL: 'https://api.jup.ag/tokens/v1',
+  JUPITER_TOKENS_BASE_URL: 'https://api.jup.ag/tokens/v2',
   JUPITER_API_KEY: 'test-jupiter-key',
 };
 
@@ -564,8 +564,8 @@ describe('GET /api/v1/jupiter/sol-tokens', () => {
     await app.fetch(mockRequest('GET', 'http://localhost/api/v1/jupiter/sol-tokens'), mockEnv);
 
     const callUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    // Should use JUPITER_TOKENS_BASE_URL, not JUPITER_BASE_URL
-    expect(callUrl).toBe('https://api.jup.ag/tokens/v1/token-list');
+    // Should use JUPITER_TOKENS_BASE_URL (v2), not JUPITER_BASE_URL
+    expect(callUrl).toBe('https://api.jup.ag/tokens/v2/tag?query=verified');
     expect(callUrl).not.toContain('/swap/v2');
   });
 
