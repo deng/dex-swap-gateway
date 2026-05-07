@@ -208,6 +208,8 @@ class ApiClient {
           return JupiterOrderResponseRoutePlanInner.fromJson(value);
         case 'JupiterSwapInfo':
           return JupiterSwapInfo.fromJson(value);
+        case 'JupiterTokenData':
+          return JupiterTokenData.fromJson(value);
         case 'OkxResponse':
           return OkxResponse.fromJson(value);
         case 'QuoteData':
