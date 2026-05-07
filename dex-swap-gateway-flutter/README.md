@@ -65,6 +65,7 @@ Class | Method | HTTP request | Description
 *DEXSwapApi* | [**apiV1DexSwapTokensGet**](doc//DEXSwapApi.md#apiv1dexswaptokensget) | **GET** /api/v1/dex-swap/tokens | 获取代币列表
 *JupiterApi* | [**apiV1JupiterExecutePost**](doc//JupiterApi.md#apiv1jupiterexecutepost) | **POST** /api/v1/jupiter/execute | 执行 Jupiter Swap 交易
 *JupiterApi* | [**apiV1JupiterOrderGet**](doc//JupiterApi.md#apiv1jupiterorderget) | **GET** /api/v1/jupiter/order | 获取 Jupiter 报价和交易
+*JupiterApi* | [**apiV1JupiterTokensGet**](doc//JupiterApi.md#apiv1jupitertokensget) | **GET** /api/v1/jupiter/tokens | 获取 Jupiter 支持的所有代币列表
 *SystemApi* | [**apiV1HealthGet**](doc//SystemApi.md#apiv1healthget) | **GET** /api/v1/health | 健康检查
 
 
@@ -83,6 +84,7 @@ Class | Method | HTTP request | Description
  - [JupiterOrderResponse](doc//JupiterOrderResponse.md)
  - [JupiterOrderResponseRoutePlanInner](doc//JupiterOrderResponseRoutePlanInner.md)
  - [JupiterSwapInfo](doc//JupiterSwapInfo.md)
+ - [JupiterTokenData](doc//JupiterTokenData.md)
  - [OkxResponse](doc//OkxResponse.md)
  - [QuoteData](doc//QuoteData.md)
  - [QuoteResponse](doc//QuoteResponse.md)

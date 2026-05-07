@@ -4,7 +4,7 @@
 
 name: 'dex_swap_gateway'
 version: '1.0.0'
-description: 'ZeroWallet DEX Swap Gateway API client for Flutter'
+description: 'OpenAPI API client'
 homepage: 'homepage'
 environment:
   sdk: '>=2.12.0 <4.0.0'
