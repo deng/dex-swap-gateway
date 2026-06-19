@@ -73,6 +73,62 @@ describe('CHAIN_MAP', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Unit tests: CAIP2_MAP
+// ---------------------------------------------------------------------------
+describe('CAIP2_MAP', () => {
+  it('should have CAIP-2 entries for all supported chains', async () => {
+    const { CAIP2_MAP } = await import('../src/index');
+    expect(CAIP2_MAP['eip155:1']).toBe('eth');
+    expect(CAIP2_MAP['eip155:56']).toBe('bsc');
+    expect(CAIP2_MAP['eip155:137']).toBe('polygon');
+    expect(CAIP2_MAP['eip155:8453']).toBe('base');
+    expect(CAIP2_MAP['eip155:42161']).toBe('arbitrum');
+    expect(CAIP2_MAP['eip155:10']).toBe('optimism');
+    expect(CAIP2_MAP['sui:mainnet']).toBe('sui');
+    expect(CAIP2_MAP['ton:-1']).toBe('ton');
+    expect(CAIP2_MAP['tron:0x2b6653dc']).toBe('trx');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit tests: resolveChain
+// ---------------------------------------------------------------------------
+describe('resolveChain', () => {
+  it('should resolve short names to OKX chainIndex', async () => {
+    const { resolveChain } = await import('../src/index');
+    expect(resolveChain('eth')).toBe('1');
+    expect(resolveChain('bsc')).toBe('56');
+    expect(resolveChain('trx')).toBe('195');
+  });
+
+  it('should resolve CAIP-2 identifiers to OKX chainIndex', async () => {
+    const { resolveChain } = await import('../src/index');
+    expect(resolveChain('eip155:1')).toBe('1');
+    expect(resolveChain('eip155:56')).toBe('56');
+    expect(resolveChain('eip155:137')).toBe('137');
+    expect(resolveChain('eip155:8453')).toBe('8453');
+    expect(resolveChain('eip155:42161')).toBe('42161');
+    expect(resolveChain('eip155:10')).toBe('10');
+    expect(resolveChain('sui:mainnet')).toBe('784');
+    expect(resolveChain('ton:-1')).toBe('607');
+    expect(resolveChain('tron:0x2b6653dc')).toBe('195');
+  });
+
+  it('should be case-insensitive for CAIP-2', async () => {
+    const { resolveChain } = await import('../src/index');
+    expect(resolveChain('EIP155:1')).toBe('1');
+    expect(resolveChain('TRON:0x2b6653dc')).toBe('195');
+  });
+
+  it('should return undefined for unsupported chain', async () => {
+    const { resolveChain } = await import('../src/index');
+    expect(resolveChain('eip155:999')).toBeUndefined();
+    expect(resolveChain('solana:mainnet')).toBeUndefined();
+    expect(resolveChain('xyz')).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Integration tests: HTTP endpoints
 // ---------------------------------------------------------------------------
 async function createApp() {
@@ -128,6 +184,26 @@ describe('GET /api/v1/dex-swap/tokens', () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toContain('Unsupported chain');
+  });
+
+  it('should accept CAIP-2 chain identifiers', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: '0', data: [] }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/tokens?chain=eip155:1'),
+      mockEnv,
+    );
+
+    expect(res.status).toBe(200);
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toContain('chainIndex=1');
+
+    globalThis.fetch = originalFetch;
   });
 });
 
@@ -217,6 +293,25 @@ describe('GET /api/v1/dex-swap/quote', () => {
 
     globalThis.fetch = originalFetch;
   });
+
+  it('should accept CAIP-2 chain in quote endpoint', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/quote?chain=eip155:56&fromToken=0xA&toToken=0xB&amount=100'),
+      mockEnv,
+    );
+    expect(res.status).toBe(200);
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toContain('chainIndex=56');
+
+    globalThis.fetch = originalFetch;
+  });
 });
 
 describe('POST /api/v1/dex-swap/build-tx', () => {
@@ -255,6 +350,53 @@ describe('POST /api/v1/dex-swap/build-tx', () => {
     expect(callUrl).toContain('slippagePercent=0.5');
     expect(callUrl).toContain('userWalletAddress=0xUser');
     expect(callUrl).toContain('swapMode=exactIn');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should accept CAIP-2 chain in build-tx', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-tx', {
+        chain: 'eip155:42161',
+        fromToken: '0xFrom',
+        toToken: '0xTo',
+        amount: '100',
+        fromAddress: '0xUser',
+      }),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0];
+    expect(callUrl).toContain('chainIndex=42161');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should accept CAIP-2 chain in build-approve', async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: 'ok' }), { status: 200 }),
+    );
+    globalThis.fetch = mockFetch;
+
+    const app = await createApp();
+    await app.fetch(
+      mockRequest('POST', 'http://localhost/api/v1/dex-swap/build-approve', {
+        chain: 'tron:0x2b6653dc',
+        token: '0xToken',
+      }),
+      mockEnv,
+    );
+
+    const callUrl = mockFetch.mock.calls[0][0];
+    expect(callUrl).toContain('chainIndex=195');
 
     globalThis.fetch = originalFetch;
   });

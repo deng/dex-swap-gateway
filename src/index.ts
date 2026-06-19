@@ -31,6 +31,28 @@ const CHAIN_MAP: ChainMap = {
   trx: '195',         // Tron
 };
 
+// CAIP-2 → wallet short name mapping
+const CAIP2_MAP: Record<string, string> = {
+  'eip155:1': 'eth',
+  'eip155:56': 'bsc',
+  'eip155:137': 'polygon',
+  'eip155:8453': 'base',
+  'eip155:42161': 'arbitrum',
+  'eip155:10': 'optimism',
+  'sui:mainnet': 'sui',
+  'ton:-1': 'ton',
+  'tron:0x2b6653dc': 'trx',
+};
+
+/** Resolve a chain identifier (short name or CAIP-2) to an OKX chainIndex */
+function resolveChain(chain: string): string | undefined {
+  if (!chain) return undefined;
+  const direct = CHAIN_MAP[chain];
+  if (direct) return direct;
+  const shortName = CAIP2_MAP[chain.toLowerCase()];
+  return shortName ? CHAIN_MAP[shortName] : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // HMAC-SHA256 signing for OKX API
 // ---------------------------------------------------------------------------
@@ -115,7 +137,7 @@ interface CacheEntry {
 const tokenCache = new Map<string, CacheEntry>();
 
 async function getTokens(env: Env, chain: string): Promise<Response> {
-  const okxChain = CHAIN_MAP[chain];
+  const okxChain = resolveChain(chain);
   if (!okxChain) {
     return new Response(JSON.stringify({ error: `Unsupported chain: ${chain}` }), {
       status: 400,
@@ -234,7 +256,7 @@ app.get('/api/v1/dex-swap/quote', async (c) => {
   const chain = c.req.query('chain');
   if (!chain) return c.json({ error: 'Missing chain' }, 400);
 
-  const okxChain = CHAIN_MAP[chain];
+  const okxChain = resolveChain(chain);
   if (!okxChain) return c.json({ error: `Unsupported chain: ${chain}` }, 400);
 
   const fromToken = c.req.query('fromToken');
@@ -265,7 +287,7 @@ app.get('/api/v1/dex-swap/quote', async (c) => {
 app.post('/api/v1/dex-swap/build-tx', async (c) => {
   const body = await c.req.json();
   const chain = body.chain;
-  const okxChain = CHAIN_MAP[chain];
+  const okxChain = resolveChain(chain);
   if (!okxChain) return c.json({ error: `Unsupported chain: ${chain}` }, 400);
 
   const queryParams = new URLSearchParams({
@@ -289,7 +311,7 @@ app.post('/api/v1/dex-swap/build-tx', async (c) => {
 app.post('/api/v1/dex-swap/build-approve', async (c) => {
   const body = await c.req.json();
   const chain = body.chain;
-  const okxChain = CHAIN_MAP[chain];
+  const okxChain = resolveChain(chain);
   if (!okxChain) return c.json({ error: `Unsupported chain: ${chain}` }, 400);
 
   const queryParams = new URLSearchParams({
@@ -384,7 +406,7 @@ app.get('/api/v1/jupiter/tokens', async (c) => {
 // Export for Cloudflare Worker
 // ---------------------------------------------------------------------------
 const openapiSpec = () => {
-  const chains = Object.keys(CHAIN_MAP);
+  const chains = [...Object.keys(CHAIN_MAP), ...Object.keys(CAIP2_MAP)];
   return {
     openapi: '3.0.3',
     info: {
@@ -1031,4 +1053,4 @@ export default {
 // ---------------------------------------------------------------------------
 // Re-export for testing
 // ---------------------------------------------------------------------------
-export { signAsync, CHAIN_MAP };
+export { signAsync, CHAIN_MAP, CAIP2_MAP, resolveChain };
