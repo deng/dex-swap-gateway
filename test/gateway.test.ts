@@ -36,69 +36,27 @@ describe('signAsync', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Unit tests: CHAIN_MAP
-// ---------------------------------------------------------------------------
-describe('CHAIN_MAP', () => {
-  it('should have entries for all supported EVM chains', async () => {
-    const { CHAIN_MAP } = await import('../src/index');
-    expect(CHAIN_MAP['eth']).toBeDefined();
-    expect(CHAIN_MAP['bsc']).toBeDefined();
-    expect(CHAIN_MAP['polygon']).toBeDefined();
-    expect(CHAIN_MAP['base']).toBeDefined();
-    expect(CHAIN_MAP['arbitrum']).toBeDefined();
-    expect(CHAIN_MAP['optimism']).toBeDefined();
-    expect(CHAIN_MAP['sui']).toBeDefined();
-    expect(CHAIN_MAP['ton']).toBeDefined();
-    expect(CHAIN_MAP['trx']).toBeDefined();
-  });
-
-  it('should not have entry for unsupported chains', async () => {
-    const { CHAIN_MAP } = await import('../src/index');
-    expect(CHAIN_MAP['btc']).toBeUndefined();
-    expect(CHAIN_MAP['sol']).toBeUndefined();
-  });
-
-  it('should use correct v6 chainIndex values', async () => {
-    const { CHAIN_MAP } = await import('../src/index');
-    expect(CHAIN_MAP['eth']).toBe('1');
-    expect(CHAIN_MAP['bsc']).toBe('56');
-    expect(CHAIN_MAP['polygon']).toBe('137');
-    expect(CHAIN_MAP['base']).toBe('8453');
-    expect(CHAIN_MAP['arbitrum']).toBe('42161');
-    expect(CHAIN_MAP['optimism']).toBe('10');
-    expect(CHAIN_MAP['sui']).toBe('784');
-    expect(CHAIN_MAP['ton']).toBe('607');
-    expect(CHAIN_MAP['trx']).toBe('195');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Unit tests: CAIP2_MAP
-// ---------------------------------------------------------------------------
-describe('CAIP2_MAP', () => {
-  it('should have CAIP-2 entries for all supported chains', async () => {
-    const { CAIP2_MAP } = await import('../src/index');
-    expect(CAIP2_MAP['eip155:1']).toBe('eth');
-    expect(CAIP2_MAP['eip155:56']).toBe('bsc');
-    expect(CAIP2_MAP['eip155:137']).toBe('polygon');
-    expect(CAIP2_MAP['eip155:8453']).toBe('base');
-    expect(CAIP2_MAP['eip155:42161']).toBe('arbitrum');
-    expect(CAIP2_MAP['eip155:10']).toBe('optimism');
-    expect(CAIP2_MAP['sui:mainnet']).toBe('sui');
-    expect(CAIP2_MAP['ton:-1']).toBe('ton');
-    expect(CAIP2_MAP['tron:0x2b6653dc']).toBe('trx');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Unit tests: resolveChain
+// Unit tests: resolveChain (from chain-utils)
 // ---------------------------------------------------------------------------
 describe('resolveChain', () => {
   it('should resolve short names to OKX chainIndex', async () => {
     const { resolveChain } = await import('../src/index');
     expect(resolveChain('eth')).toBe('1');
     expect(resolveChain('bsc')).toBe('56');
+    expect(resolveChain('polygon')).toBe('137');
+    expect(resolveChain('base')).toBe('8453');
+    expect(resolveChain('arbitrum')).toBe('42161');
+    expect(resolveChain('optimism')).toBe('10');
+    expect(resolveChain('sui')).toBe('784');
+    expect(resolveChain('ton')).toBe('607');
     expect(resolveChain('trx')).toBe('195');
+  });
+
+  it('should not resolve unsupported chains', async () => {
+    const { resolveChain } = await import('../src/index');
+    expect(resolveChain('btc')).toBeUndefined();
+    expect(resolveChain('sol')).toBeUndefined();
+    expect(resolveChain('avalanche')).toBeUndefined();
   });
 
   it('should resolve CAIP-2 identifiers to OKX chainIndex', async () => {
@@ -846,6 +804,94 @@ describe('Cache control headers', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Logo proxy tests
+// ---------------------------------------------------------------------------
+describe('Logo proxy', () => {
+  it('should return 404 for unsupported chain', async () => {
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/tokens/sui/0xABC/logo'),
+      mockEnv,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('should return 404 for non-existent token logo', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response('Not found', { status: 404 }),
+    );
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/tokens/eth/0x0000000000000000000000000000000000000001/logo'),
+      mockEnv,
+    );
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe('Logo not found');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should fetch logo image bytes from Trust Wallet CDN', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response('fake-image-bytes', { status: 200, headers: { 'Content-Type': 'image/png' } }),
+    );
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/tokens/eth/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo'),
+      mockEnv,
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('image/png');
+    expect(res.headers.get('Cache-Control')).toContain('max-age=86400');
+    const text = await res.text();
+    expect(text).toBe('fake-image-bytes');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should include CORS headers on logo response', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response('logo', { status: 200, headers: { 'Content-Type': 'image/png' } }),
+    );
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/tokens/bsc/0x0000000000000000000000000000000000001000/logo'),
+      mockEnv,
+    );
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should use EIP-55 checksum address in Trust Wallet URL', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response('logo', { status: 200, headers: { 'Content-Type': 'image/png' } }),
+    );
+
+    const app = await createApp();
+    // USDT address (lowercase) — the proxy should checksum it
+    await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/tokens/eth/0xdac17f958d2ee523a2206206994597c13d831ec7/logo'),
+      mockEnv,
+    );
+
+    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    // Should use checksummed address in the TW URL
+    expect(calledUrl).toContain('0xdAC17F958D2ee523a2206206994597C13D831ec7');
+
+    globalThis.fetch = originalFetch;
+  });
+});
+
 describe('Token cache behavior', () => {
   it('should return X-Cache: HIT on subsequent token requests', async () => {
     const originalFetch = globalThis.fetch;
@@ -927,6 +973,7 @@ describe('OpenAPI documentation', () => {
     expect(spec.info.title).toBe('ZeroWallet DEX Swap Gateway');
     expect(spec.paths['/api/v1/health']).toBeDefined();
     expect(spec.paths['/api/v1/dex-swap/tokens']).toBeDefined();
+    expect(spec.paths['/api/v1/dex-swap/tokens/{chain}/{tokenAddress}/logo']).toBeDefined();
     expect(spec.paths['/api/v1/dex-swap/quote']).toBeDefined();
     expect(spec.paths['/api/v1/dex-swap/build-tx']).toBeDefined();
     expect(spec.paths['/api/v1/dex-swap/build-approve']).toBeDefined();

@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { CHAIN_REGISTRY, resolveChain as resolveChainInfo } from '@zero-wallet/chain-utils';
+import { keccak256 } from 'js-sha3';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,41 +18,47 @@ export interface Env {
   JUPITER_API_KEY: string;
 }
 
-type ChainMap = Record<string, string>;
+// Supported chains (short names that are enabled for DEX swap)
+const SUPPORTED_CHAINS = new Set(['eth', 'bsc', 'polygon', 'base', 'arbitrum', 'optimism', 'sui', 'ton', 'trx']);
 
-// OKX chainIndex mapping: wallet ChainType → OKX chainIndex (v6)
-const CHAIN_MAP: ChainMap = {
-  eth: '1',           // Ethereum
-  bsc: '56',          // BSC
-  polygon: '137',     // Polygon
-  base: '8453',       // Base
-  arbitrum: '42161',  // Arbitrum
-  optimism: '10',     // Optimism
-  sui: '784',         // Sui
-  ton: '607',         // TON
-  trx: '195',         // Tron
+// Trust Wallet blockchain directory names for logo CDN
+const TW_CHAINS: Record<string, string> = {
+  eth: 'ethereum',
+  bsc: 'smartchain',
+  polygon: 'polygon',
+  base: 'base',
+  arbitrum: 'arbitrum',
+  optimism: 'optimism',
+  trx: 'tron',
 };
-
-// CAIP-2 → wallet short name mapping
-const CAIP2_MAP: Record<string, string> = {
-  'eip155:1': 'eth',
-  'eip155:56': 'bsc',
-  'eip155:137': 'polygon',
-  'eip155:8453': 'base',
-  'eip155:42161': 'arbitrum',
-  'eip155:10': 'optimism',
-  'sui:mainnet': 'sui',
-  'ton:-1': 'ton',
-  'tron:0x2b6653dc': 'trx',
-};
+// sui, ton: no Trust Wallet blockchain directory — logos fall through to OKX CDN
 
 /** Resolve a chain identifier (short name or CAIP-2) to an OKX chainIndex */
 function resolveChain(chain: string): string | undefined {
   if (!chain) return undefined;
-  const direct = CHAIN_MAP[chain];
-  if (direct) return direct;
-  const shortName = CAIP2_MAP[chain.toLowerCase()];
-  return shortName ? CHAIN_MAP[shortName] : undefined;
+  const info = resolveChainInfo(chain);
+  if (!info?.okxChainIndex || !SUPPORTED_CHAINS.has(info.shortName)) return undefined;
+  return info.okxChainIndex;
+}
+
+// EIP-55 checksum address encoding (only for valid 40-char hex addresses)
+function toChecksumAddress(address: string): string {
+  const addr = address.toLowerCase().replace('0x', '');
+  if (addr.length !== 40 || !/^[0-9a-f]{40}$/.test(addr)) return address;
+  const hash = keccak256(addr);
+  let checksummed = '0x';
+  for (let i = 0; i < 40; i++) {
+    checksummed += parseInt(hash[i], 16) >= 8 ? addr[i].toUpperCase() : addr[i];
+  }
+  return checksummed;
+}
+
+// Build Trust Wallet CDN logo URL for a token, or null if chain isn't supported
+function logoUrl(chain: string, address: string): string | null {
+  const twChain = TW_CHAINS[chain];
+  if (!twChain) return null;
+  const addr = address.startsWith('0x') ? toChecksumAddress(address) : address;
+  return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${twChain}/assets/${addr}/logo.png`;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +144,7 @@ interface CacheEntry {
 }
 const tokenCache = new Map<string, CacheEntry>();
 
-async function getTokens(env: Env, chain: string): Promise<Response> {
+async function getTokens(env: Env, chain: string, host: string): Promise<Response> {
   const okxChain = resolveChain(chain);
   if (!okxChain) {
     return new Response(JSON.stringify({ error: `Unsupported chain: ${chain}` }), {
@@ -144,6 +152,10 @@ async function getTokens(env: Env, chain: string): Promise<Response> {
       headers: { 'Content-Type': 'application/json' },
     });
   }
+
+  // Get short name for logo URL construction
+  const info = resolveChainInfo(chain);
+  const shortName = info?.shortName || chain;
 
   // Check cache
   const cacheKey = `tokens:${chain}`;
@@ -166,7 +178,20 @@ async function getTokens(env: Env, chain: string): Promise<Response> {
   });
 
   if (response.ok) {
-    const data = await response.json();
+    const data = await response.json() as { code?: string; msg?: string; data?: any[] };
+    // Rewrite tokenLogoUrl to gateway proxy for Trust Wallet-supported chains
+    const twChain = TW_CHAINS[shortName];
+    const NATIVE_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+    if (data.data && Array.isArray(data.data)) {
+      data.data = data.data.map((token: any) => {
+        const addr = token.tokenContractAddress;
+        if (!twChain || addr === NATIVE_TOKEN_ADDRESS) return token;
+        return {
+          ...token,
+          tokenLogoUrl: `${host}/api/v1/dex-swap/tokens/${shortName}/${addr}/logo`,
+        };
+      });
+    }
     tokenCache.set(cacheKey, { data, expiresAt: Date.now() + ttl * 1000 });
     return new Response(JSON.stringify(data), {
       headers: {
@@ -248,7 +273,24 @@ app.get('/api/v1/dex-swap/tokens', async (c) => {
   if (!chain) {
     return c.json({ error: 'Missing chain parameter' }, 400);
   }
-  return getTokens(c.env, chain);
+  const origin = new URL(c.req.url).origin;
+  return getTokens(c.env, chain, origin);
+});
+
+// Token logo proxy — proxies from Trust Wallet CDN through the gateway
+app.get('/api/v1/dex-swap/tokens/:chain/:tokenAddress/logo', async (c) => {
+  const { chain, tokenAddress } = c.req.param();
+  const twUrl = logoUrl(chain, tokenAddress);
+  if (!twUrl) return c.json({ error: 'Chain not supported for logo' }, 404);
+
+  const res = await fetch(twUrl, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) return c.json({ error: 'Logo not found' }, 404);
+
+  const buf = await res.arrayBuffer();
+  return c.body(buf, 200, {
+    'Content-Type': res.headers.get('Content-Type') || 'image/png',
+    'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+  });
 });
 
 // Get quote
@@ -406,7 +448,9 @@ app.get('/api/v1/jupiter/tokens', async (c) => {
 // Export for Cloudflare Worker
 // ---------------------------------------------------------------------------
 const openapiSpec = () => {
-  const chains = [...Object.keys(CHAIN_MAP), ...Object.keys(CAIP2_MAP)];
+  const chains = CHAIN_REGISTRY
+    .filter(c => c.okxChainIndex && SUPPORTED_CHAINS.has(c.shortName))
+    .flatMap(c => [c.shortName, c.caip2]);
   return {
     openapi: '3.0.3',
     info: {
@@ -438,7 +482,7 @@ const openapiSpec = () => {
       '/api/v1/dex-swap/tokens': {
         get: {
           summary: '获取代币列表',
-          description: '获取指定链上支持的代币列表。结果会缓存（默认60s）。',
+          description: '获取指定链上支持的代币列表。结果会缓存（默认60s）。tokenLogoUrl 通过网关代理（Trust Wallet CDN），减少客户端对外部 CDN 的直接依赖。',
           tags: ['DEX Swap'],
           parameters: [
             {
@@ -458,6 +502,39 @@ const openapiSpec = () => {
             },
             '400': {
               description: '缺少 chain 参数或不支持的链',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/GatewayErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api/v1/dex-swap/tokens/{chain}/{tokenAddress}/logo': {
+        get: {
+          summary: '获取代币 logo',
+          description: '代理代币 logo 图片（Trust Wallet CDN）。返回图片字节数据，附带边缘缓存。',
+          tags: ['DEX Swap'],
+          parameters: [
+            {
+              name: 'chain', in: 'path', required: true,
+              schema: { type: 'string' },
+              description: '链短名称', example: 'eth',
+            },
+            {
+              name: 'tokenAddress', in: 'path', required: true,
+              schema: { type: 'string' },
+              description: '代币合约地址', example: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Logo 图片 (PNG)',
+              content: { 'image/png': {} },
+            },
+            '404': {
+              description: 'Logo 未找到或链不支持',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/GatewayErrorResponse' },
@@ -1053,4 +1130,4 @@ export default {
 // ---------------------------------------------------------------------------
 // Re-export for testing
 // ---------------------------------------------------------------------------
-export { signAsync, CHAIN_MAP, CAIP2_MAP, resolveChain };
+export { signAsync, resolveChain, SUPPORTED_CHAINS };

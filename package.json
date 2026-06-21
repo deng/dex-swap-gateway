@@ -14,12 +14,14 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",
+    "@zero-wallet/chain-utils": "file:../../packages/chain-utils",
     "dotenv-cli": "^11.0.0",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0",
     "wrangler": "^3.0.0"
   },
   "dependencies": {
-    "hono": "^4.12.16"
+    "hono": "^4.12.16",
+    "js-sha3": "^0.9.3"
   }
 }
