@@ -185,11 +185,23 @@ async function getTokens(env: Env, chain: string, host: string): Promise<Respons
     if (data.data && Array.isArray(data.data)) {
       data.data = data.data.map((token: any) => {
         const addr = token.tokenContractAddress;
-        if (!twChain || addr === NATIVE_TOKEN_ADDRESS) return token;
-        return {
-          ...token,
-          tokenLogoUrl: `${host}/api/v1/dex-swap/tokens/${shortName}/${addr}/logo`,
-        };
+        if (addr === NATIVE_TOKEN_ADDRESS) return token;
+        const originalUrl = token.tokenLogoUrl;
+        // If original URL exists, proxy it through the gateway; otherwise fall back to TW CDN
+        if (originalUrl) {
+          return {
+            ...token,
+            tokenLogoUrl: `${host}/api/v1/dex-swap/tokens/${shortName}/${addr}/logo?url=${encodeURIComponent(originalUrl)}`,
+          };
+        }
+        // No original URL — construct from Trust Wallet CDN
+        if (twChain) {
+          return {
+            ...token,
+            tokenLogoUrl: `${host}/api/v1/dex-swap/tokens/${shortName}/${addr}/logo`,
+          };
+        }
+        return token;
       });
     }
     tokenCache.set(cacheKey, { data, expiresAt: Date.now() + ttl * 1000 });
@@ -277,13 +289,16 @@ app.get('/api/v1/dex-swap/tokens', async (c) => {
   return getTokens(c.env, chain, origin);
 });
 
-// Token logo proxy — proxies from Trust Wallet CDN through the gateway
+// Token logo proxy — proxies from original CDN URL or Trust Wallet CDN through the gateway
 app.get('/api/v1/dex-swap/tokens/:chain/:tokenAddress/logo', async (c) => {
   const { chain, tokenAddress } = c.req.param();
+  const originalUrl = c.req.query('url');
   const twUrl = logoUrl(chain, tokenAddress);
-  if (!twUrl) return c.json({ error: 'Chain not supported for logo' }, 404);
 
-  const res = await fetch(twUrl, { signal: AbortSignal.timeout(10000) });
+  const sourceUrl = originalUrl || twUrl;
+  if (!sourceUrl) return c.json({ error: 'Logo not available' }, 404);
+
+  const res = await fetch(sourceUrl, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) return c.json({ error: 'Logo not found' }, 404);
 
   const buf = await res.arrayBuffer();

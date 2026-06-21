@@ -871,6 +871,42 @@ describe('Logo proxy', () => {
     globalThis.fetch = originalFetch;
   });
 
+  it('should fetch from original URL when url param is provided', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response('okx-logo-bytes', { status: 200, headers: { 'Content-Type': 'image/png' } }),
+    );
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/tokens/eth/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo?url=https://static.okx.com/cdn/wallet/logo/USDT.png'),
+      mockEnv,
+    );
+    expect(res.status).toBe(200);
+    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toBe('https://static.okx.com/cdn/wallet/logo/USDT.png');
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it('should fall back to Trust Wallet CDN when no url param provided', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response('tw-logo-bytes', { status: 200, headers: { 'Content-Type': 'image/png' } }),
+    );
+
+    const app = await createApp();
+    const res = await app.fetch(
+      mockRequest('GET', 'http://localhost/api/v1/dex-swap/tokens/eth/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo'),
+      mockEnv,
+    );
+    expect(res.status).toBe(200);
+    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain('raw.githubusercontent.com/trustwallet');
+
+    globalThis.fetch = originalFetch;
+  });
+
   it('should use EIP-55 checksum address in Trust Wallet URL', async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn().mockResolvedValue(
